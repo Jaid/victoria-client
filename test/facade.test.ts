@@ -23,6 +23,21 @@ test('minimal constructor derives the OS service name and local OTLP endpoint', 
     process.argv = originalArgv
   }
 })
+test('object constructor derives the OS service name when omitted', async () => {
+  const originalArgv = process.argv
+  try {
+    process.argv = [String.raw`C:\portable\bun.exe`, String.raw`C:\apps\object-worker.ts`]
+    const client = new VictoriaClient({
+      endpoint: 'http://collector.test',
+      interval: false,
+    })
+    expect(client.resource['service.name']).toBe('object-worker.ts')
+    expect(client.options.serviceName).toBe('object-worker.ts')
+    await client.shutdown()
+  } finally {
+    process.argv = originalArgv
+  }
+})
 test('name-only constructor uses the local OTLP endpoint', async () => {
   const client = new VictoriaClient('worker')
   expect(client.resource['service.name']).toBe('worker')

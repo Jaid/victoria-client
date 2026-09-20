@@ -2,7 +2,7 @@ serviceName:
   type: string
   defaultRaw: |-
     OS: basename of `argv[1]`, then `argv[0]`, then `'unknown'`; browser: current hostname, then `'unknown'`
-  info: service name; first constructor argument in the named-host form
+  info: optional in object form; first constructor argument in the named-host form
 host:
   type: string
   info: base URL or hostname for the named-host form

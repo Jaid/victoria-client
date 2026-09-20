@@ -22,6 +22,9 @@ export type VictoriaClientOptions = Omit<DeliveryOptions, 'targets'> & EndpointO
   resource?: Attributes
     /** Runs before attribute limits and persistence. Never receives request headers. */
   sanitizeAttributes?: (values: Attributes, signal: Signal) => Attributes
+  serviceName?: string
+}
+type ResolvedVictoriaClientOptions = Omit<VictoriaClientOptions, 'serviceName'> & {
   serviceName: string
 }
 const severity: Record<LogLevel, number> = {
@@ -40,7 +43,7 @@ type Series = {
 class VictoriaClient {
   readonly delivery: DeliveryEngine
   readonly now: () => number
-  readonly options: VictoriaClientOptions
+  readonly options: ResolvedVictoriaClientOptions
   readonly resource: Attributes
   #closed = false
   readonly #descriptors = new Map<string, string>
@@ -67,8 +70,12 @@ class VictoriaClient {
         endpoint: defaultEndpoint,
       }
     }
-    this.options = options
-    if (!options.serviceName.trim()) {
+    const resolvedOptions: ResolvedVictoriaClientOptions = {
+      ...options,
+      serviceName: options.serviceName ?? defaultOsServiceName(),
+    }
+    this.options = resolvedOptions
+    if (!resolvedOptions.serviceName.trim()) {
       throw new TypeError('serviceName must not be empty.')
     }
     this.#maxAttributes = positiveInteger(options.maxAttributes ?? 64, 'maxAttributes')
@@ -79,15 +86,15 @@ class VictoriaClient {
       throw new TypeError('Unknown log level.')
     }
     this.resource = Object.freeze(attributes({
-      ...options.resource,
-      'service.name': options.serviceName,
-      'service.instance.id': options.resource?.['service.instance.id'] ?? composeId(),
+      ...resolvedOptions.resource,
+      'service.name': resolvedOptions.serviceName,
+      'service.instance.id': resolvedOptions.resource?.['service.instance.id'] ?? composeId(),
     }, this.#maxAttributes, this.#maxAttributeBytes))
     this.#resourceAttributes = otlpAttributes(this.resource)
-    this.now = options.now ?? clock
+    this.now = resolvedOptions.now ?? clock
     this.delivery = new DeliveryEngine({
-      ...options,
-      targets: createTargets(options),
+      ...resolvedOptions,
+      targets: createTargets(resolvedOptions),
     })
   }
   assertHealth(options?: HealthOptions): Promise<void> {

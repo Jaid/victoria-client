@@ -10,7 +10,7 @@
 
 ## portable collection
 
-`VictoriaClient` is the default export of `victoria-client`. The explicit object form still requires a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
+`VictoriaClient` is the default export of `victoria-client`. In the explicit object form, `serviceName` is optional and uses the same environment-derived default; at least one endpoint is still required. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
 | Method | Behavior |
 | --- | --- |

@@ -14,6 +14,7 @@ export type BrowserPage = Pick<Window, 'addEventListener' | 'document'>
 
 const browserOptions = (options: BrowserVictoriaClientOptions): VictoriaClientOptions => {
   const {baseUrl = typeof location === 'undefined' ? undefined : location.href, ...rest} = options
+  const serviceName = options.serviceName ?? defaultBrowserServiceName()
   const resolve = (url: string) => {
     const resolved = new URL(url, baseUrl)
     return resolved.href
@@ -32,6 +33,7 @@ const browserOptions = (options: BrowserVictoriaClientOptions): VictoriaClientOp
     maxBatchBytes: 16_000,
     maxItemBytes: 12_000,
     ...rest,
+    serviceName,
     endpoint: options.endpoint === undefined ? undefined : resolve(options.endpoint),
     endpoints: Object.fromEntries(Object.entries(options.endpoints ?? {}).map(([signal, value]) => [signal, endpoint(value)])),
   }

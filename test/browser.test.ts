@@ -27,6 +27,28 @@ test('minimal browser constructor derives service name from the current hostname
     }
   }
 })
+test('browser object constructor derives service name when omitted', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  Object.defineProperty(globalThis, 'location', {
+    configurable: true,
+    value: new URL('https://object.example.com/page'),
+  })
+  try {
+    const client = new BrowserVictoriaClient({
+      endpoint: 'https://collector.test',
+      interval: false,
+    })
+    expect(client.resource['service.name']).toBe('object.example.com')
+    expect(client.options.serviceName).toBe('object.example.com')
+    await client.shutdown()
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(globalThis, 'location', descriptor)
+    } else {
+      Reflect.deleteProperty(globalThis, 'location')
+    }
+  }
+})
 test('browser endpoints resolve relative to an explicit base and use bounded defaults', () => {
   const client = new BrowserVictoriaClient({
     serviceName: 'browser',

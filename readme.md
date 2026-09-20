@@ -250,7 +250,7 @@ Importing the portable entry does not load the SDK, SQLite or Node-specific modu
 
 ## options
 
-Constructor options below cover the zero-config, service-name-only, named-host and explicit object forms. The named-host facade takes `serviceName` as its first argument; the object form includes it in the options. Configure `host` for the facade or `endpoint`/`endpoints` for the object form. Store-specific fields belong to the `outbox` constructor, not directly to the client.
+Constructor options below cover the zero-config, service-name-only, named-host and explicit object forms. The named-host facade takes `serviceName` as its first argument; the object form accepts it optionally and otherwise derives it from the environment. Configure `host` for the facade or `endpoint`/`endpoints` for the object form. Store-specific fields belong to the `outbox` constructor, not directly to the client.
 
 option | type | default | info
 --- | --- | --- | ---
@@ -293,7 +293,7 @@ option | type | default | info
 `random` | `() => number` | `Math.random` | injectable retry-jitter source
 `resource` | `Attributes` | `{}` | scalar resource attributes; service.name is enforced and service.instance.id defaults to a new compose-id value
 `sanitizeAttributes` | `(values: Attributes, signal: Signal) => Attributes` |  | runs before collection attribute limits and persistence; does not sanitize messages or resources
-`serviceName` | `string` | OS: basename of `argv[1]`, then `argv[0]`, then `'unknown'`; browser: current hostname, then `'unknown'` | service name; first constructor argument in the named-host form
+`serviceName` | `string` | OS: basename of `argv[1]`, then `argv[0]`, then `'unknown'`; browser: current hostname, then `'unknown'` | optional in object form; first constructor argument in the named-host form
 `signalHeaders` | `Partial<Record<Signal, HeadersSource>>` |  | case-insensitive per-signal overrides for shared headers
 `timeout` | `number` | `5000` | request deadline including compression and response-body reads; also the default assertHealth deadline
 `traces` | `HostSignalOptions` | `{"path":"v1/traces","format":"otlp-json"}` | named-host trace route; false disables traces
@@ -312,7 +312,7 @@ option | type | default | info
 
 ### portable collection
 
-`VictoriaClient` is the default export of `victoria-client`. The explicit object form still requires a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
+`VictoriaClient` is the default export of `victoria-client`. In the explicit object form, `serviceName` is optional and uses the same environment-derived default; at least one endpoint is still required. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
 | Method | Behavior |
 | --- | --- |

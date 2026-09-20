@@ -61,12 +61,14 @@ import Browser from 'victoria-browser-client'
 import DeliveryEngine from 'victoria-client/delivery'
 const minimalCore = new Core
 const minimalBrowser = new Browser
+const inferredCore = new Core({endpoint: 'https://collector.test'})
+const inferredBrowser = new Browser({baseUrl: 'https://app.test', endpoint: '/telemetry'})
 const core = new Core({serviceName: 'consumer', endpoint: 'https://collector.test'})
 const browser = new Browser({serviceName: 'consumer', baseUrl: 'https://app.test', endpoint: '/telemetry'})
 const delivery: DeliveryEngine = core.delivery
 const health: Promise<void> = browser.assertHealth({timeout: 100})
 const result: Promise<boolean> = core.sync({required: false})
-void minimalCore; void minimalBrowser; void delivery; void health; void result
+void minimalCore; void minimalBrowser; void inferredCore; void inferredBrowser; void delivery; void health; void result
 `
   await fs.writeFile(join(temporary, 'portable.ts'), portableSource)
   const compiler = join(root, 'node_modules/typescript/bin/tsc')
