@@ -1,4 +1,4 @@
-## explicit collection API
+# explicit collection API
 
 ```ts
 import VictoriaClient from 'victoria-client'
@@ -27,7 +27,7 @@ Construction performs no immediate network requests. Periodic delivery is schedu
 
 There are no default NAS addresses and no implicit environment-variable discovery. A collector base URL appends `/v1/logs`, `/v1/metrics` and `/v1/traces`. A signal-specific URL is used exactly as supplied. Set a signal to `false` to disable it.
 
-## direct Victoria endpoints
+# direct Victoria endpoints
 
 VictoriaMetrics’ OTLP metrics endpoint expects protobuf. Use native JSON import with the portable client or use the OpenTelemetry entry for protobuf.
 
@@ -57,7 +57,7 @@ const telemetry = new VictoriaClient({
 })
 ```
 
-## durable collection on Bun
+# durable collection on Bun
 
 ```ts
 import VictoriaClient from 'victoria-bun-client'
@@ -81,7 +81,7 @@ Use one outbox per application/sender. The store has an exclusive, renewable lea
 
 Shutdown attempts bounded delivery and closes the store. An incomplete durable queue remains available to the next client using the same database and destinations. An incomplete memory queue is **not** durable.
 
-## OpenTelemetry SDK
+# OpenTelemetry SDK
 
 ```ts
 import OpenTelemetryClient from 'victoria-bun-client/otel'
@@ -109,7 +109,7 @@ Providers initialize lazily and stay private. Nothing registers a global tracer,
 
 SDK batches first enter an in-memory SDK buffer, then serialize into the shared outbox. `handoff: 'immediate'` removes the SDK log/span batching delay, but the delivery engine still batches network requests. SDK `emit()` and `span.end()` are **not synchronous durability acknowledgments**. Call `flush()`/`shutdown()` to hand off SDK data. Metrics remain subject to their collection/export interval in either mode.
 
-## delivery semantics
+# delivery semantics
 
 Admission, HTTP acknowledgment and durable backend storage are different events. `log()` returning `true` means admitted locally, not delivered remotely. `flush()` returns a report, not a blanket delivery guarantee.
 
@@ -117,7 +117,7 @@ An empty queue can result from successful delivery **or explicit rejection**. In
 
 Retries preserve record identities and timestamps. There is no exactly-once guarantee: an acknowledged request followed by a crash before local acknowledgment, or a lost response, can produce duplicates. Native Victoria ingestion can process data asynchronously; HTTP acknowledgment does not prove every input was parsed and retained. Keep authoritative business records outside this telemetry queue.
 
-## entry points
+# entry points
 
 | Entry | Purpose |
 | --- | --- |

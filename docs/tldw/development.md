@@ -2,11 +2,11 @@ Maintain readme content in `docs/tldw` and the automatically included `docs/api.
 
 `bun tldw` regenerates it.
 
-### validation
+# validation
 
 `bun run test`, `bun run typecheck` and `bun run lint` check the source. Backend integration tests require explicit disposable backend URLs.
 
-### package builds
+# package builds
 
 Run `bun run build`. The pipeline regenerates the readme, uses Vite/Rolldown to emit complete per-flavor intermediate projects and declarations with the pinned TypeScript compiler, then invokes `build_lib.exe` in precompiled production mode.
 

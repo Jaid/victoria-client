@@ -1,4 +1,4 @@
-## one shared delivery engine
+# one shared delivery engine
 
 The structural base is a new implementation of Slop Gallery’s `telemethree` delivery ideas, not a copy of its application instrumentation. The portable API and official-SDK adapter share an encoded-payload outbox and HTTP sender.
 
@@ -11,7 +11,7 @@ Official SDK ─ protobuf handoff ──────┘
 
 Separating collection, encoding, persistence and transport prevents retry loops with conflicting ownership. The SDK owns collection and local handoff. The delivery engine owns remote acknowledgment, retry and deletion. HTTP work never runs inside a SQLite transaction.
 
-## what came from each candidate
+# what came from each candidate
 
 | Candidate | Incorporated | Reworked or omitted |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ Separating collection, encoding, persistence and transport prevents retry loops 
 | Windows metrics pusher | Preserve historical timestamps through outages | SQLite replaces repeated whole-file JSONL reads and rewrites |
 | make-logger | Convenient leveled logging | No per-log network request, discarded provider lifecycle or transport guessing by port |
 
-## additional changes
+# additional changes
 
 Memory storage uses constant-time accounting rather than rescanning a growing queue for every event. Native metrics group a series into timestamp/value arrays and resolve millisecond collisions after final label normalization. OTLP JSON batches share resource/scope envelopes and metric descriptors.
 
@@ -33,13 +33,13 @@ Authentication errors pause rather than discard data or retry continuously. Head
 
 Shutdown interrupts longer requests and owns a bounded drain budget. It reports remaining data rather than equating a fulfilled promise with successful delivery. Durable admission is synchronous; no unbounded promise chain holds pending records outside the database.
 
-## source organization
+# source organization
 
 `VictoriaClient.ts` owns portable collection. `tracing/` owns spans and trace headers. `delivery/` owns policy and transport. `codecs/` owns wire formats. `storage/` supplies the common contract and memory/SQLite implementations. `bun/` adds async context and streamed HTTP observation. `otel/` contains the official-SDK bridge.
 
 The low-level contracts are exported for adapters. Applications still own instrumentation, public relay authentication, authoritative business persistence and lifecycle integration. This package does not modify any existing producer or NAS configuration.
 
-## distribution pipeline
+# distribution pipeline
 
 One source tree produces three independent ESM packages. `scripts/flavors.ts` declares each flavor’s entry points, and `vite.config.ts` turns each flavor into a complete build_lib-compatible intermediate project with bundled runtime files, reachable declarations and package metadata. `scripts/build.ts` then runs build_lib on those intermediates. Core and browser graphs reject runtime built-ins and external SDK imports during bundling. The Bun root imports async context only; SQLite and the official SDK remain separate entry points. Each package flavor exposes its primary client as the default export. Supporting classes remain named only on aggregate entry points where multiple peer values are intentionally exposed.
 
