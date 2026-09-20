@@ -4,17 +4,17 @@
 
 powerful abstractions for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics
 
-## intro
+## minimal example
 
-Shared collection and delivery for VictoriaLogs, VictoriaMetrics and VictoriaTraces. Modern TypeScript and ESM, with separate portable, browser and Bun packages.
+```ts
+import VictoriaClient from 'victoria-client'
 
-All flavors share the same retry policy, codecs and bounded outbox. No NAS addresses or credentials are embedded.
+const client = new VictoriaClient
 
-| package | runtime and features |
-| --- | --- |
-| `victoria-client` | Environment-agnostic core, explicit tracing and memory storage; no runtime dependencies |
-| `victoria-browser-client` | Core plus page lifecycle handling, relative endpoint resolution and bounded keepalive requests; no runtime dependencies |
-| `victoria-bun-client` | Async-local tracing; optional `/sqlite` for Bun persistence and `/otel` for official SDK/protobuf collection |
+client.log('running')
+client.metric('fps', 60)
+client.pushTrace('click', {target: 'button'})
+```
 
 ## features
 
@@ -37,18 +37,6 @@ npm install --save victoria-client
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/victoria-client@0.1.0/index.js"></script>
-```
-
-## minimal example
-
-```ts
-import VictoriaClient from 'victoria-client'
-
-const client = new VictoriaClient
-
-client.log('running')
-client.metric('fps', 60)
-client.pushTrace('click', {target: 'button'})
 ```
 
 ## usage
@@ -312,7 +300,7 @@ option | type | default | info
 `timeout` | `number` | `5000` | request deadline including compression and response-body reads; also the default assertHealth deadline
 `traces` | `HostSignalOptions` | `{"path":"v1/traces","format":"otlp-json"}` | named-host trace route; false disables traces
 
-## api
+## API
 
 ### constructors
 
@@ -445,6 +433,14 @@ Browser defaults are `keepalive: true`, `maxBatchBytes: 16000` and `maxItemBytes
 `sync({required: false, timeout?})` returns `true` on complete delivery or `false` when synchronization fails. `required: true` (the default) keeps the strict report-returning behavior and throws on delivery failure or timeout. Local storage/encoding failures encountered during optional synchronization also produce `false`; invalid timeout arguments still throw. Queued data is retained according to the normal delivery policy.
 
 ## notes
+
+### packages
+
+| package | runtime and features |
+| --- | --- |
+| `victoria-client` | Environment-agnostic core, explicit tracing and memory storage; no runtime dependencies |
+| `victoria-browser-client` | Core plus page lifecycle handling, relative endpoint resolution and bounded keepalive requests; no runtime dependencies |
+| `victoria-bun-client` | Async-local tracing; optional `/sqlite` for Bun persistence and `/otel` for official SDK/protobuf collection |
 
 ### reliability and storage
 
@@ -634,6 +630,6 @@ bun run test
 Copyright © 2026, Jaid \<jaid.jsx@gmail.com> (https://github.com/jaid)
 
 <!--
-readme generated with tldw v9.5.0 from ./docs/tldw
+readme generated with tldw v9.7.0 from ./docs/tldw
 github.com/Jaid/tldw
 -->

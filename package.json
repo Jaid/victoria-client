@@ -1,7 +1,7 @@
 {
   "name": "victoria-client",
   "displayName": "VictoriaClient",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "powerful abstractions for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics",
   "funding": "https://github.com/sponsors/Jaid",
@@ -63,7 +63,7 @@
     "eslint": "10.11.0",
     "eslint-config-jaid": "33.0.0",
     "fs-extra": "11.4.0",
-    "tldw": "9.6.0",
+    "tldw": "9.7.0",
     "tsconfig-jaid-bun": "16.0.0",
     "typescript": "npm:typescript-classic@6.0.4",
     "vite": "8.3.0",

@@ -1,3 +1,11 @@
+# packages
+
+| package | runtime and features |
+| --- | --- |
+| `victoria-client` | Environment-agnostic core, explicit tracing and memory storage; no runtime dependencies |
+| `victoria-browser-client` | Core plus page lifecycle handling, relative endpoint resolution and bounded keepalive requests; no runtime dependencies |
+| `victoria-bun-client` | Async-local tracing; optional `/sqlite` for Bun persistence and `/otel` for official SDK/protobuf collection |
+
 # reliability and storage
 
 ## failure policy
