@@ -36,7 +36,7 @@ npm install --save victoria-client
 <a href="https://www.jsdelivr.com/package/npm/victoria-client"><img src="https://shieldcn.dev/badge/jsDelivr-victoria--client-orange.svg?variant=secondary&logo=html5&logoColor=white" alt="victoria-client on jsDelivr"/></a> <a href="https://unpkg.com/browse/victoria-client/"><img src="https://shieldcn.dev/badge/UNPKG-victoria--client-orange.svg?variant=secondary&logo=html5&logoColor=white" alt="victoria-client on UNPKG"/></a>
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/victoria-client@0.1.0/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/victoria-client@0.1.1/index.js"></script>
 ```
 
 ## usage
@@ -130,7 +130,7 @@ const telemetry = new VictoriaClient({
 try {
   telemetry.info('Started.', {version: '1.0.0'})
   telemetry.metric('workers.active', 3)
-  telemetry.count('jobs.completed')
+  telemetry.increment('jobs.completed')
   await telemetry.wrap('job.run', async span => {
     telemetry.log('Processing.', {context: span})
     span.addEvent('job.validated')
@@ -321,14 +321,15 @@ option | type | default | info
 | `log(message, options?)` | Structured log; options are `level`, `attributes`, `context` and Unix-millisecond `time` |
 | `debug/info/warn/error/fatal(message, attributes?)` | Convenience log methods |
 | `metric(name, value, options?)` | Gauge observation |
-| `count(name, amount = 1, options?)` | Nonnegative increment to a cumulative counter |
+| `count(name, value = 1, options?)` | Set a cumulative counter to an absolute nonnegative value |
+| `increment(name, amount = 1, options?)` | Add a nonnegative amount to a cumulative counter |
 | `startSpan(name, options?)` | Explicit span; options are `parent`, `attributes`, `kind` and `startTime` |
 | `trace(message, attributes?)` | TRACE-level structured log |
 | `wrap(name, operation, options?)` | Span wrapper; synchronous operations return synchronously, promise-like operations stay asynchronous, and original exceptions/rejections are preserved |
 
 Log and metric collection return `true` when admitted or `false` when disabled, filtered, closed or rejected by a capacity limit. Storage failures throw instead of claiming durable admission. Invalid numbers and incompatible metric descriptors throw. Log bodies are strings; attributes are finite numbers, booleans or strings.
 
-Metric options are `attributes`, `unit` and `time`. A metric name cannot change kind or unit within a client. The series budget applies to gauges and counters. Counter totals keep advancing when the outbox is full, so a later admitted cumulative point can include intervening increments. Counter state is in memory; a new client gets a new default `service.instance.id` to distinguish its lifetime. Reusing a stable instance ID across restarts requires understanding counter resets.
+Metric options are `attributes`, `unit` and `time`. A metric name cannot change kind or unit within a client. The series budget applies to gauges and counters. `count()` sets the current cumulative counter value and `increment()` adds to it; counters cannot decrease within a client. Counter state keeps advancing when the outbox is full, so a later admitted cumulative point can include intervening updates. Counter state is in memory; a new client gets a new default `service.instance.id` to distinguish its lifetime. Reusing a stable instance ID across restarts requires understanding counter resets.
 
 A span exposes `traceId`, `spanId`, `traceFlags`, `startTime`, `setAttributes()`, `addEvent()`, `end()` and `traceparent()`. `end(status = 'ok', attributes = {}, time = now())` accepts `ok`, `error` or `unset`. End time cannot precede start time. Ending twice returns `false`. Event overflow increments `droppedEventsCount`. Unsampled parent flags propagate and prevent exporting a completed child; logs remain independently available.
 

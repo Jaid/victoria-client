@@ -11,7 +11,7 @@ const telemetry = new VictoriaClient({
 try {
   telemetry.info('Started.', {version: '1.0.0'})
   telemetry.metric('workers.active', 3)
-  telemetry.count('jobs.completed')
+  telemetry.increment('jobs.completed')
   await telemetry.wrap('job.run', async span => {
     telemetry.log('Processing.', {context: span})
     span.addEvent('job.validated')

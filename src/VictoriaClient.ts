@@ -154,8 +154,8 @@ class VictoriaClient {
       maxSeries: this.#maxSeries,
     }
   }
-  count(name: string, amount = 1, options: MetricOptions = {}) {
-    return this.#metric(name, amount, 'counter', options)
+  count(name: string, value = 1, options: MetricOptions = {}) {
+    return this.#metric(name, value, 'counter', options)
   }
   debug(message: string, values?: Attributes) {
     return this.log(message, {
@@ -177,6 +177,9 @@ class VictoriaClient {
   }
   flush(options?: FlushOptions) {
     return this.delivery.flush(options)
+  }
+  increment(name: string, amount = 1, options: MetricOptions = {}) {
+    return this.#metric(name, amount, 'counter', options, 'increment')
   }
   info(message: string, values?: Attributes) {
     return this.log(message, {
@@ -322,7 +325,7 @@ class VictoriaClient {
     }
     return typeof (value as {then?: unknown}).then === 'function'
   }
-  #metric(name: string, value: number, kind: 'counter' | 'gauge', options: MetricOptions) {
+  #metric(name: string, value: number, kind: 'counter' | 'gauge', options: MetricOptions, mode: 'absolute' | 'increment' = 'absolute') {
     if (this.#closed || !this.delivery.targets.metrics) {
       return false
     }
@@ -357,11 +360,15 @@ class VictoriaClient {
       this.#descriptors.set(name, descriptor)
     }
     if (kind === 'counter') {
-      if (!Number.isFinite(series.value + value)) {
+      const nextValue = mode === 'increment' ? series.value + value : value
+      if (!Number.isFinite(nextValue)) {
         throw new RangeError('The cumulative counter overflowed.')
       }
-      series.value += value
-      value = series.value
+      if (nextValue < series.value) {
+        throw new RangeError('Counters must not decrease.')
+      }
+      series.value = nextValue
+      value = nextValue
     }
     const point = {
       attributes: otlpAttributes(values),

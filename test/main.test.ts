@@ -81,17 +81,20 @@ test('native metrics pack multiple timestamps per series and coalesce millisecon
   expect(row.values).toEqual([2, 3])
   expect(row.timestamps).toEqual([1000, 1001])
 })
-test('OTLP metrics keep one descriptor with multiple cumulative points', async () => {
+test('OTLP metrics keep one descriptor with absolute and incremental cumulative points', async () => {
   const {client, calls, advance} = fixture()
   client.count('requests', 2)
   advance(10)
-  client.count('requests', 3)
+  client.increment('requests', 3)
+  advance(10)
+  client.count('requests', 8)
   await client.flush()
   const records = wireRecords(calls[0].body, 'metrics')
   expect(records).toHaveLength(1)
   expect(records[0].sum?.aggregationTemporality).toBe(2)
-  expect(records[0].sum?.dataPoints.map(point => point.asDouble)).toEqual([2, 5])
+  expect(records[0].sum?.dataPoints.map(point => point.asDouble)).toEqual([2, 5, 8])
   expect(new Set(records[0].sum?.dataPoints.map(point => point.startTimeUnixNano)).size).toBe(1)
+  expect(() => client.count('requests', 7)).toThrow('must not decrease')
 })
 test('gauge cardinality is bounded too and metric descriptors cannot change', () => {
   const {client} = fixture({maxSeries: 2})
