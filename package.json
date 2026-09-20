@@ -41,7 +41,7 @@
     "#root/*": "./*"
   },
   "scripts": {
-    "build": "bun scripts/build.ts",
+    "build": "bun run readme && bun scripts/build.ts",
     "lint": "eslint . --max-warnings 0",
     "readme": "bun tldw",
     "test": "bun test --max-concurrency 1 ./test",
