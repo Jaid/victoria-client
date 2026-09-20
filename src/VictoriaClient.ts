@@ -17,7 +17,10 @@ import {validateContext} from './tracing/context.ts'
 import Span from './tracing/Span.ts'
 import {attributes, canonical, clock, encode, encoder, otlpAttributes, positiveInteger, stringifyLabel, timestamp, unixNano} from './util.ts'
 
+export type Collector = (client: VictoriaClient) => unknown
 export type VictoriaClientOptions = Omit<DeliveryOptions, 'targets'> & EndpointOptions & Limits & {
+  collectors?: Array<Collector> | Record<string, Collector>
+  collectorTimeout?: number
   minLogLevel?: LogLevel
   resource?: Attributes
     /** Runs before attribute limits and persistence. Never receives request headers. */
@@ -46,6 +49,11 @@ class VictoriaClient {
   readonly options: ResolvedVictoriaClientOptions
   readonly resource: Attributes
   #closed = false
+  readonly #collectors: Array<{
+    collector: Collector
+    name?: string
+  }> = []
+  readonly #collectorTimeout: number
   readonly #descriptors = new Map<string, string>
   readonly #maxAttributeBytes: number
   readonly #maxAttributes: number
@@ -75,6 +83,7 @@ class VictoriaClient {
       serviceName: options.serviceName ?? defaultOsServiceName(),
     }
     this.options = resolvedOptions
+    this.#collectorTimeout = positiveInteger(resolvedOptions.collectorTimeout ?? 100, 'collectorTimeout', 2_147_483_647)
     if (!resolvedOptions.serviceName.trim()) {
       throw new TypeError('serviceName must not be empty.')
     }
@@ -92,13 +101,51 @@ class VictoriaClient {
     }, this.#maxAttributes, this.#maxAttributeBytes))
     this.#resourceAttributes = otlpAttributes(this.resource)
     this.now = resolvedOptions.now ?? clock
+    const {collectors, collectorTimeout: _collectorTimeout, ...deliveryOptions} = resolvedOptions
     this.delivery = new DeliveryEngine({
-      ...resolvedOptions,
+      ...deliveryOptions,
       targets: createTargets(resolvedOptions),
-    })
+    }, () => this.#runCollectors())
+    if (Array.isArray(collectors)) {
+      for (const collector of collectors) {
+        this.addCollector(collector)
+      }
+    } else if (collectors) {
+      for (const [name, collector] of Object.entries(collectors)) {
+        this.addCollector(name, collector)
+      }
+    }
+  }
+  addCollector(collector: Collector): this
+  addCollector(name: string, collector: Collector): this
+  addCollector(nameOrCollector: Collector | string, collector?: Collector) {
+    if (typeof nameOrCollector === 'string') {
+      if (!nameOrCollector.trim()) {
+        throw new TypeError('Collector name must not be empty.')
+      }
+      if (!collector) {
+        throw new TypeError('Named collectors require a callback.')
+      }
+      const existing = this.#collectors.find(entry => entry.name === nameOrCollector)
+      if (existing) {
+        existing.collector = collector
+      } else {
+        this.#collectors.push({
+          name: nameOrCollector,
+          collector,
+        })
+      }
+    } else if (!this.#collectors.some(entry => entry.name === undefined && entry.collector === nameOrCollector)) {
+      this.#collectors.push({collector: nameOrCollector})
+    }
+    return this
   }
   assertHealth(options?: HealthOptions): Promise<void> {
     return this.delivery.assertHealth(options)
+  }
+  clearCollectors() {
+    this.#collectors.length = 0
+    return this
   }
   collectionStatus() {
     return {
@@ -192,6 +239,16 @@ class VictoriaClient {
     })
     return span.end(options.status ?? 'ok', {}, time)
   }
+  removeCollector(reference: Collector | string) {
+    const before = this.#collectors.length
+    for (let index = this.#collectors.length - 1; index >= 0; index--) {
+      const entry = this.#collectors[index]
+      if (typeof reference === 'string' ? entry.name === reference : entry.collector === reference) {
+        this.#collectors.splice(index, 1)
+      }
+    }
+    return this.#collectors.length !== before
+  }
   resume(signal?: Signal) {
     this.delivery.resume(signal)
   }
@@ -248,6 +305,16 @@ class VictoriaClient {
   #attributes(values: Attributes | undefined, signal: Signal) {
     const input = {...values}
     return attributes(this.options.sanitizeAttributes?.(input, signal) ?? input, this.#maxAttributes, this.#maxAttributeBytes)
+  }
+  #collectorError(name?: string) {
+    try {
+      this.options.onEvent?.({
+        type: 'error',
+        message: name ? `Collector ${name} failed.` : 'Telemetry collector failed.',
+      })
+    } catch {
+      // Observation callbacks cannot interrupt collection.
+    }
   }
   #isPromiseLike(value: unknown): value is PromiseLike<unknown> {
     if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
@@ -343,6 +410,31 @@ class VictoriaClient {
         [records]: [record],
       }],
     }] })
+  }
+  async #runCollectors() {
+    if (!this.#collectors.length) {
+      return
+    }
+    const pending = [...this.#collectors].map(({collector, name}) => {
+      try {
+        return Promise.resolve(collector(this)).catch(() => this.#collectorError(name))
+      } catch {
+        this.#collectorError(name)
+        return Promise.resolve()
+      }
+    })
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        Promise.all(pending),
+        new Promise<void>(resolve => {
+          timer = setTimeout(resolve, this.#collectorTimeout)
+          ;(timer as unknown as {unref?: () => void}).unref?.()
+        }),
+      ])
+    } finally {
+      clearTimeout(timer)
+    }
   }
   #wrap<T>(name: string, operation: (span: Span) => T, options: SpanOptions): T {
     const span = this.startSpan(name, options)

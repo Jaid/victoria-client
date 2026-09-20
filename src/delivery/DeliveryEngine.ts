@@ -82,6 +82,7 @@ export default class DeliveryEngine {
   #accepting = true
   readonly #batchBytes: number
   readonly #batchItems: number
+  readonly #beforeScheduledFlush?: () => Promise<void> | void
   #closed = false
   #controller?: AbortController
   #finalReport?: DeliveryReport
@@ -102,7 +103,8 @@ export default class DeliveryEngine {
     traces: emptyTotals(),
   }
   readonly #transport: HttpTransport
-  constructor(readonly options: DeliveryOptions) {
+  constructor(readonly options: DeliveryOptions, beforeScheduledFlush?: () => Promise<void> | void) {
+    this.#beforeScheduledFlush = beforeScheduledFlush
     this.targets = Object.freeze(Object.fromEntries(Object.entries(options.targets).map(([signal, target]) => [signal, {
       ...target,
       headers: target.headers ?? options.signalHeaders?.[signal as Signal],
@@ -566,14 +568,24 @@ export default class DeliveryEngine {
     }
     this.#timer = setTimeout(() => {
       this.#timer = undefined
-      void this.flush().catch(() => this.#emit({
-        type: 'error',
-        message: 'Telemetry flushing failed. Check outbox ownership and storage availability.',
-      })).finally(() => this.#schedule())
+      this.#scheduledFlush().catch(() => {})
     }, this.#interval);
     (this.#timer as unknown as {
       unref?: () => void
     }).unref?.()
+  }
+  async #scheduledFlush() {
+    try {
+      await this.#beforeScheduledFlush?.()
+      await this.flush()
+    } catch {
+      this.#emit({
+        type: 'error',
+        message: 'Telemetry flushing failed. Check collectors, outbox ownership and storage availability.',
+      })
+    } finally {
+      this.#schedule()
+    }
   }
   #stopScheduler() {
     clearTimeout(this.#timer)

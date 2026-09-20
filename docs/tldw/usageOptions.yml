@@ -94,6 +94,13 @@ maxAttempts:
   type: number
   defaultRaw: "`Number.MAX_SAFE_INTEGER`"
   info: attempt limit per failed batch
+collectors:
+  type: Array<Collector> | Record<string, Collector>
+  info: callbacks invoked immediately before scheduled flushes; record keys become names accepted by removeCollector
+collectorTimeout:
+  type: number
+  default: 100
+  info: maximum milliseconds a scheduled flush waits for asynchronous collector work; cannot preempt blocking JavaScript
 interval:
   type: number | false
   default: 1000

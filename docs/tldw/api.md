@@ -64,6 +64,24 @@ Generic collector endpoints retain strict OTLP content-type/body validation. Set
 
 `initialRetry` defaults to 1000 and `maxRetry` to 60 000. Positive jitter adds up to 20% to the capped exponential delay. A longer `Retry-After` wins. `now` and `random` support deterministic tests; normal applications should keep their defaults.
 
+## collectors
+
+`addCollector(collector)` and `addCollector(name, collector)` register callbacks that run immediately before every scheduled flush. The callback receives the client instance as its first argument and may be synchronous or asynchronous. Constructor options accept `collectors: Array<Collector> | Record<string, Collector>`.
+
+```ts
+victoria.addCollector(() => {
+  victoria.metric('ram_free', os.freemem())
+})
+
+victoria.addCollector('my-pc-collector', client => {
+  client.metric('ram_total', os.totalmem())
+})
+```
+
+A scheduled flush waits up to `collectorTimeout` (100 milliseconds by default) for the collector pass. Observations admitted before that deadline are inside that flush’s barrier. Slow asynchronous collectors continue running; observations they produce later stay in the normal outbox and are delivered by a later flush. The deadline cannot preempt synchronous JavaScript, so collectors should not perform blocking work. Collector failures do not block delivery and are reported through `onEvent` as generic errors.
+
+`removeCollector(nameOrReference)` removes a named collector or every registration using the given callback reference and returns whether anything was removed. `clearCollectors()` removes all registrations. Manual `flush()`, `sync()` and `shutdown()` do not invoke collectors; collectors are tied specifically to scheduled collection.
+
 ## lifecycle and reports
 
 `interval` controls the unreferenced delivery timer and defaults to 1000 ms. Set it to `false` or `0` to disable periodic delivery. `setInterval(value)` can later enable, disable or reschedule the timer with the same value semantics. There is no manual `start()`; use `flush()`, `sync()` and `shutdown()` for explicit lifecycle barriers.

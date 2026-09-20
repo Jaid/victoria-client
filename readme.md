@@ -39,6 +39,21 @@ npm install --save victoria-client
 <script src="https://cdn.jsdelivr.net/npm/victoria-client@0.1.0/index.js"></script>
 ```
 
+## minimal example
+
+```ts
+import VictoriaClient from 'victoria-client'
+
+const client = new VictoriaClient
+
+client.log('running')
+client.metric('stars', 5)
+client.pushTrace('performance', {
+  fps: 60,
+  quality: 'ultra',
+})
+```
+
 ## usage
 
 ```ts
@@ -255,6 +270,8 @@ Constructor options below cover the zero-config, service-name-only, named-host a
 option | type | default | info
 --- | --- | --- | ---
 `baseUrl` | `string` | `location.href` | browser object form only; base for relative endpoints
+`collectors` | `Array<Collector> \| Record<string, Collector>` |  | callbacks invoked immediately before scheduled flushes; record keys become names accepted by removeCollector
+`collectorTimeout` | `number` | `100` | maximum milliseconds a scheduled flush waits for asynchronous collector work; cannot preempt blocking JavaScript
 `compression` | `false \| 'gzip'` | `false` | gzip only when smaller; SDK flavor defaults to gzip
 `compressionThreshold` | `number` | `1024` | minimum payload size before trying gzip
 `endpoint` | `string` | `'http://localhost:4318'` for zero-argument and service-name-only constructors | OTLP collector base URL in the object form; appends /v1/{signal}
@@ -365,6 +382,24 @@ Generic collector endpoints retain strict OTLP content-type/body validation. Set
 `keepalive` is opt-in and set only for transmitted bodies of at most 16 000 bytes. This conservative per-request bound cannot guarantee availability of the browser’s aggregate keepalive budget. Unload delivery remains best-effort.
 
 `initialRetry` defaults to 1000 and `maxRetry` to 60 000. Positive jitter adds up to 20% to the capped exponential delay. A longer `Retry-After` wins. `now` and `random` support deterministic tests; normal applications should keep their defaults.
+
+### collectors
+
+`addCollector(collector)` and `addCollector(name, collector)` register callbacks that run immediately before every scheduled flush. The callback receives the client instance as its first argument and may be synchronous or asynchronous. Constructor options accept `collectors: Array<Collector> | Record<string, Collector>`.
+
+```ts
+victoria.addCollector(() => {
+  victoria.metric('ram_free', os.freemem())
+})
+
+victoria.addCollector('my-pc-collector', client => {
+  client.metric('ram_total', os.totalmem())
+})
+```
+
+A scheduled flush waits up to `collectorTimeout` (100 milliseconds by default) for the collector pass. Observations admitted before that deadline are inside that flush’s barrier. Slow asynchronous collectors continue running; observations they produce later stay in the normal outbox and are delivered by a later flush. The deadline cannot preempt synchronous JavaScript, so collectors should not perform blocking work. Collector failures do not block delivery and are reported through `onEvent` as generic errors.
+
+`removeCollector(nameOrReference)` removes a named collector or every registration using the given callback reference and returns whether anything was removed. `clearCollectors()` removes all registrations. Manual `flush()`, `sync()` and `shutdown()` do not invoke collectors; collectors are tied specifically to scheduled collection.
 
 ### lifecycle and reports
 
@@ -602,6 +637,6 @@ bun run test
 Copyright © 2026, Jaid \<jaid.jsx@gmail.com> (https://github.com/jaid)
 
 <!--
-Readme generated with tldw v9.4.1 from ./docs/tldw
-https://github.com/Jaid/tldw
+readme generated with tldw v9.5.0 from ./docs/tldw
+github.com/Jaid/tldw
 -->
