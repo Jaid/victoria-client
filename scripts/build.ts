@@ -47,7 +47,7 @@ async function buildFlavor(flavor: PackageFlavor) {
     'types',
     '--optimizeCopiedScripts',
     '--terser-strength',
-    'max',
+    'aggressive',
     '--mode',
     'production',
     '--outputFolder',
