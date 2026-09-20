@@ -119,7 +119,7 @@ Retries preserve record identities and timestamps. There is no exactly-once guar
 
 # entry points
 
-| Entry | Purpose |
+| entry | purpose |
 | --- | --- |
 | `victoria-client` | Portable collection, memory storage, explicit tracing and native endpoint helpers |
 | `victoria-client/bun` | Async-local tracing and streamed HTTP response instrumentation; SQLite is available separately at `/sqlite` |

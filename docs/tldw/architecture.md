@@ -13,7 +13,7 @@ Separating collection, encoding, persistence and transport prevents retry loops 
 
 # what came from each candidate
 
-| Candidate | Incorporated | Reworked or omitted |
+| candidate | incorporated | reworked or omitted |
 | --- | --- | --- |
 | Slop Gallery / telemethree | Independent bounded signals, safe concurrent appends, byte limits, explicit status, partial-success handling, backoff and native metrics | Interchangeable encoded outbox; ready-snapshot draining instead of one batch; gauge cardinality bounds |
 | Mage | Private lazy official SDK providers, batch processors, cumulative metrics, cardinality limits and protobuf | Official serializers feed the common queue instead of a second network exporter/retry loop |

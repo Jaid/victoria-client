@@ -10,7 +10,7 @@ Maintain readme content in `docs/tldw` and the automatically included `docs/api.
 
 Run `bun run build`. The pipeline regenerates the readme, uses Vite/Rolldown to emit complete per-flavor intermediate projects and declarations with the pinned TypeScript compiler, then invokes `build_lib.exe` in precompiled production mode.
 
-| Package | Production directory |
+| package | production directory |
 | --- | --- |
 | Core | `dist/package/victoria-client/production` |
 | Browser | `dist/package/victoria-browser-client/production` |

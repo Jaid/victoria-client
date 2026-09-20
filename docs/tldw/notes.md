@@ -2,7 +2,7 @@
 
 ## failure policy
 
-| Outcome | Policy |
+| outcome | policy |
 | --- | --- |
 | Network failure or timeout | Retain the frozen batch and back off |
 | OTLP 429, 502, 503 or 504 | Retry with backoff, jitter and `Retry-After` |

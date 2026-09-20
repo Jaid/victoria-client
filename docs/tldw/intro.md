@@ -2,7 +2,7 @@ Shared collection and delivery for VictoriaLogs, VictoriaMetrics and VictoriaTra
 
 All flavors share the same retry policy, codecs and bounded outbox. No NAS addresses or credentials are embedded.
 
-| Package | Runtime and features |
+| package | runtime and features |
 | --- | --- |
 | `victoria-client` | Environment-agnostic core, explicit tracing and memory storage; no runtime dependencies |
 | `victoria-browser-client` | Core plus page lifecycle handling, relative endpoint resolution and bounded keepalive requests; no runtime dependencies |

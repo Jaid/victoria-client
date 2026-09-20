@@ -10,7 +10,7 @@ Shared collection and delivery for VictoriaLogs, VictoriaMetrics and VictoriaTra
 
 All flavors share the same retry policy, codecs and bounded outbox. No NAS addresses or credentials are embedded.
 
-| Package | Runtime and features |
+| package | runtime and features |
 | --- | --- |
 | `victoria-client` | Environment-agnostic core, explicit tracing and memory storage; no runtime dependencies |
 | `victoria-browser-client` | Core plus page lifecycle handling, relative endpoint resolution and bounded keepalive requests; no runtime dependencies |
@@ -250,7 +250,7 @@ Retries preserve record identities and timestamps. There is no exactly-once guar
 
 ### entry points
 
-| Entry | Purpose |
+| entry | purpose |
 | --- | --- |
 | `victoria-client` | Portable collection, memory storage, explicit tracing and native endpoint helpers |
 | `victoria-client/bun` | Async-local tracing and streamed HTTP response instrumentation; SQLite is available separately at `/sqlite` |
@@ -328,7 +328,7 @@ option | type | default | info
 
 `VictoriaClient` is the default export of `victoria-client`. In the explicit object form, `serviceName` is optional and uses the same environment-derived default; at least one endpoint is still required. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
-| Method | Behavior |
+| method | behavior |
 | --- | --- |
 | `log(message, options?)` | Structured log; options are `level`, `attributes`, `context` and Unix-millisecond `time` |
 | `debug/info/warn/error/fatal(message, attributes?)` | Convenience log methods |
@@ -450,7 +450,7 @@ Browser defaults are `keepalive: true`, `maxBatchBytes: 16000` and `maxItemBytes
 
 #### failure policy
 
-| Outcome | Policy |
+| outcome | policy |
 | --- | --- |
 | Network failure or timeout | Retain the frozen batch and back off |
 | OTLP 429, 502, 503 or 504 | Retry with backoff, jitter and `Retry-After` |
@@ -544,7 +544,7 @@ Separating collection, encoding, persistence and transport prevents retry loops 
 
 ### what came from each candidate
 
-| Candidate | Incorporated | Reworked or omitted |
+| candidate | incorporated | reworked or omitted |
 | --- | --- | --- |
 | Slop Gallery / telemethree | Independent bounded signals, safe concurrent appends, byte limits, explicit status, partial-success handling, backoff and native metrics | Interchangeable encoded outbox; ready-snapshot draining instead of one batch; gauge cardinality bounds |
 | Mage | Private lazy official SDK providers, batch processors, cumulative metrics, cardinality limits and protobuf | Official serializers feed the common queue instead of a second network exporter/retry loop |
@@ -590,7 +590,7 @@ Maintain readme content in `docs/tldw` and the automatically included `docs/api.
 
 Run `bun run build`. The pipeline regenerates the readme, uses Vite/Rolldown to emit complete per-flavor intermediate projects and declarations with the pinned TypeScript compiler, then invokes `build_lib.exe` in precompiled production mode.
 
-| Package | Production directory |
+| package | production directory |
 | --- | --- |
 | Core | `dist/package/victoria-client/production` |
 | Browser | `dist/package/victoria-browser-client/production` |

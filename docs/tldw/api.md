@@ -12,7 +12,7 @@
 
 `VictoriaClient` is the default export of `victoria-client`. In the explicit object form, `serviceName` is optional and uses the same environment-derived default; at least one endpoint is still required. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
-| Method | Behavior |
+| method | behavior |
 | --- | --- |
 | `log(message, options?)` | Structured log; options are `level`, `attributes`, `context` and Unix-millisecond `time` |
 | `debug/info/warn/error/fatal(message, attributes?)` | Convenience log methods |
