@@ -1,3 +1,21 @@
 {
-  "extends": "./node_modules/tsconfig-jaid-bun/base.json"
+  "extends": "./node_modules/tsconfig-jaid-bun/base.json",
+  "compilerOptions": {
+    "strict": true,
+    "lib": [
+      "esnext",
+      "dom",
+      "dom.iterable"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "examples/**/*.ts",
+    "eslint.config.ts",
+    "docs/**/*.ts",
+    "scripts/**/*.ts",
+    "vite.config.ts",
+    "package.json"
+  ]
 }

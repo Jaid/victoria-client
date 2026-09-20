@@ -1,0 +1,1 @@
+Constructor options below cover the named-host facade and the explicit object form. The facade takes `serviceName` as its first argument; the object form includes it in the options. Configure `host` for the facade or `endpoint`/`endpoints` for the object form. Store-specific fields belong to the `outbox` constructor, not directly to the client.

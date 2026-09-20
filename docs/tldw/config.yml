@@ -1,0 +1,7 @@
+installation:
+  packageManagers: npm
+options:
+  style: table
+tryInBrowser: false
+tldw:
+  needsNodeRuntime: false

@@ -1,0 +1,169 @@
+serviceName:
+  type: string
+  required: true
+  info: service name; first constructor argument in the named-host form
+host:
+  type: string
+  info: base URL or hostname for the named-host form
+protocol:
+  type: "'http' | 'https'"
+  defaultRaw: |-
+    `'https'` for bare hosts, otherwise the URL protocol
+  info: overrides the host URL protocol
+port:
+  type: number
+  info: optional port override
+path:
+  type: string
+  info: shared path prefix in the named-host form
+logs:
+  type: HostSignalOptions
+  default:
+    path: v1/logs
+    format: otlp-json
+  info: named-host log route; false disables logs
+metrics:
+  type: HostSignalOptions
+  default:
+    path: api/v1/import
+    format: victoria-json
+  info: named-host metrics route; false disables metrics
+traces:
+  type: HostSignalOptions
+  default:
+    path: v1/traces
+    format: otlp-json
+  info: named-host trace route; false disables traces
+endpoint:
+  type: string
+  info: OTLP collector base URL in the object form; appends /v1/{signal}
+endpoints:
+  type: Partial<Record<Signal, Endpoint>>
+  info: exact per-signal URLs and formats; false disables a signal
+resource:
+  type: Attributes
+  default: {}
+  info: scalar resource attributes; service.name is enforced and service.instance.id defaults to a new compose-id value
+minLogLevel:
+  type: LogLevel
+  default: info
+  info: minimum emitted log severity
+sanitizeAttributes:
+  type: "(values: Attributes, signal: Signal) => Attributes"
+  info: runs before collection attribute limits and persistence; does not sanitize messages or resources
+maxAttributes:
+  type: number
+  default: 64
+  info: maximum entries per attribute map
+maxAttributeBytes:
+  type: number
+  default: 1024
+  info: UTF-8 byte limit for individual attribute strings and names
+maxSpanEvents:
+  type: number
+  default: 32
+  info: maximum events per span
+maxSeries:
+  type: number
+  default: 1024
+  info: distinct portable gauge and counter series
+maxItemBytes:
+  type: number
+  defaultRaw: "`Math.min(64000, maxBatchBytes)`"
+  info: encoded outbox item limit; browser flavor defaults to 12000
+maxBatchItems:
+  type: number
+  default: 256
+  info: maximum outbox items selected per request
+maxBatchBytes:
+  type: number
+  default: 256000
+  info: encoded request limit before gzip; browser flavor defaults to 16000
+maxResponseBytes:
+  type: number
+  default: 64000
+  info: maximum decoded acknowledgment body size
+maxAge:
+  type: number
+  default: 604800000
+  info: age limit checked when a batch becomes eligible for delivery
+maxAttempts:
+  type: number
+  defaultRaw: "`Number.MAX_SAFE_INTEGER`"
+  info: attempt limit per failed batch
+interval:
+  type: number | false
+  default: 1000
+  info: delay between scheduled delivery passes; false or 0 disables the scheduler
+timeout:
+  type: number
+  default: 5000
+  info: request deadline including compression and response-body reads; also the default assertHealth deadline
+initialRetry:
+  type: number
+  default: 1000
+  info: initial exponential retry delay
+maxRetry:
+  type: number
+  default: 60000
+  info: exponential delay cap before jitter; a longer Retry-After wins
+compression:
+  type: false | 'gzip'
+  default: false
+  info: gzip only when smaller; SDK flavor defaults to gzip
+compressionThreshold:
+  type: number
+  default: 1024
+  info: minimum payload size before trying gzip
+keepalive:
+  type: boolean
+  default: false
+  info: only applied to requests at most 16000 bytes; enabled by default in the browser flavor
+headers:
+  type: HeadersSource
+  info: static headers or synchronous credential factory; never persisted
+signalHeaders:
+  type: Partial<Record<Signal, HeadersSource>>
+  info: case-insensitive per-signal overrides for shared headers
+fetch:
+  type: "(url: string, init: RequestInit) => Promise<Response>"
+  defaultRaw: "`fetch`"
+  info: injectable transport; must honor the abort signal
+outbox:
+  type: Outbox
+  defaultRaw: "`new MemoryOutbox`"
+  info: memory or optional SQLite storage owned by one delivery engine
+outbox.maxItems:
+  type: number
+  default: 2048
+  info: per-signal queued-item limit; configure on the outbox constructor
+outbox.maxBytes:
+  type: number
+  default: 16000000
+  info: per-signal logical payload-byte limit
+outbox.maxDeadLetters:
+  type: number
+  default: 100
+  info: maximum retained rejection diagnostics; payloads are not retained
+outbox.path:
+  type: string
+  info: "required SQLite filename or :memory: when constructing SqliteOutbox"
+outbox.lease:
+  type: number
+  default: 60000
+  info: SQLite ownership lease; minimum 3000
+onEvent:
+  type: "(event: DeliveryEvent) => void"
+  info: delivery diagnostics callback; exceptions cannot interrupt delivery
+now:
+  type: () => number
+  defaultRaw: Unix milliseconds
+  info: injectable clock for deterministic tests
+random:
+  type: () => number
+  defaultRaw: "`Math.random`"
+  info: injectable retry-jitter source
+baseUrl:
+  type: string
+  defaultRaw: "`location.href`"
+  info: browser object form only; base for relative endpoints

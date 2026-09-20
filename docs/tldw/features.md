@@ -1,0 +1,6 @@
+- unified engine for all client environments and server setups
+- logs, metrics and traces combined into a streamlined, pleasant-to-use interface
+- easy starting point with minimal boilerplate, but extensive configurability for advanced usage
+- specialized engine flavors for distinct environments like browsers and Bun
+- insane robustness and perseverance, preventing data loss in the most suboptimal conditions
+- native Victoria formats and OTLP JSON/Protobuf

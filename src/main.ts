@@ -1,5 +1,12 @@
-const victoriaClient = () => {
-  return 'victoria-client' // TODO Implement actual functionality
-}
-
-export default victoriaClient
+export type {DeliveryEvent, DeliveryOptions, DeliveryReport, FlushOptions, HealthOptions, SignalStatus} from './delivery/DeliveryEngine.ts'
+export {nativeEndpoints} from './endpoints.ts'
+export type {Endpoint, EndpointOptions, Format} from './endpoints.ts'
+export type {HostSignalOptions, PushTraceOptions, SyncOptions, TraceData, VictoriaHostOptions} from './facade.ts'
+export {default as Outbox} from './storage/base/Outbox.ts'
+export type {DeadLetter, OutboxOptions} from './storage/base/Outbox.ts'
+export {default as MemoryOutbox} from './storage/MemoryOutbox.ts'
+export {parseTraceparent, traceparent} from './tracing/context.ts'
+export {default as Span} from './tracing/Span.ts'
+export type {Attributes, AttributeValue, Limits, LogLevel, LogOptions, MetricOptions, Signal, SpanKind, SpanOptions, SpanStatus, TraceContext} from './types.ts'
+export {default} from './VictoriaClient.ts'
+export type {VictoriaClientOptions} from './VictoriaClient.ts'

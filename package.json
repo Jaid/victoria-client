@@ -1,5 +1,6 @@
 {
   "name": "victoria-client",
+  "displayName": "VictoriaClient",
   "version": "0.1.0",
   "type": "module",
   "description": "class for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics",
@@ -11,7 +12,28 @@
   },
   "exports": {
     ".": {
+      "types": "./src/main.ts",
       "default": "./src/main.ts"
+    },
+    "./bun": {
+      "types": "./src/bun/main.ts",
+      "default": "./src/bun/main.ts"
+    },
+    "./sqlite": {
+      "types": "./src/storage/SqliteOutbox.ts",
+      "default": "./src/storage/SqliteOutbox.ts"
+    },
+    "./otel": {
+      "types": "./src/otel/main.ts",
+      "default": "./src/otel/main.ts"
+    },
+    "./delivery": {
+      "types": "./src/delivery/main.ts",
+      "default": "./src/delivery/main.ts"
+    },
+    "./browser": {
+      "types": "./src/browser/main.ts",
+      "default": "./src/browser/main.ts"
     }
   },
   "imports": {
@@ -19,14 +41,41 @@
     "#root/*": "./*"
   },
   "scripts": {
-    "test": "bun test --max-concurrency 1 ./test"
+    "build": "bun scripts/build.ts",
+    "lint": "eslint . --max-warnings 0",
+    "readme": "bun tldw",
+    "test": "bun test --max-concurrency 1 ./test",
+    "test:packages": "bun run build && bun scripts/verifyPackages.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "compose-id": "0.2.0",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/api-logs": "0.222.0",
+    "@opentelemetry/core": "2.11.0",
+    "@opentelemetry/otlp-transformer": "0.222.0",
+    "@opentelemetry/resources": "2.11.0",
+    "@opentelemetry/sdk-logs": "0.222.0",
+    "@opentelemetry/sdk-metrics": "2.11.0",
+    "@opentelemetry/sdk-trace": "2.11.0"
   },
   "devDependencies": {
     "eslint": "10.11.0",
     "eslint-config-jaid": "33.0.0",
-    "tldw": "9.0.0",
+    "fs-extra": "11.4.0",
+    "tldw": "9.4.1",
     "tsconfig-jaid-bun": "16.0.0",
     "typescript": "npm:typescript-classic@6.0.4",
-    "@types/bun": "1.4.2"
-  }
+    "vite": "8.3.0",
+    "@types/bun": "1.4.2",
+    "@types/fs-extra": "11.0.4"
+  },
+  "files": [
+    "src",
+    "docs",
+    "examples",
+    "readme.md",
+    "license.txt"
+  ],
+  "sideEffects": false
 }
