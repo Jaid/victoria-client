@@ -59,12 +59,14 @@ try {
   const portableSource = `import Core from 'victoria-client'
 import Browser from 'victoria-browser-client'
 import DeliveryEngine from 'victoria-client/delivery'
+const minimalCore = new Core
+const minimalBrowser = new Browser
 const core = new Core({serviceName: 'consumer', endpoint: 'https://collector.test'})
 const browser = new Browser({serviceName: 'consumer', baseUrl: 'https://app.test', endpoint: '/telemetry'})
 const delivery: DeliveryEngine = core.delivery
 const health: Promise<void> = browser.assertHealth({timeout: 100})
 const result: Promise<boolean> = core.sync({required: false})
-void delivery; void health; void result
+void minimalCore; void minimalBrowser; void delivery; void health; void result
 `
   await fs.writeFile(join(temporary, 'portable.ts'), portableSource)
   const compiler = join(root, 'node_modules/typescript/bin/tsc')
@@ -106,6 +108,10 @@ import DeliveryEngine from 'victoria-client/delivery'
 import SqliteOutbox from 'victoria-bun-client/sqlite'
 import Sdk from 'victoria-bun-client/otel'
 const fetch = async () => Response.json({})
+const minimal = new Core
+assert.equal(minimal.resource['service.name'], 'runtime.ts')
+assert.equal(minimal.delivery.targets.logs?.url, 'http://localhost:4318/v1/logs')
+await minimal.shutdown()
 const client = new Core({serviceName: 'packed', endpoint: 'https://collector.test', fetch})
 assert(client.delivery instanceof DeliveryEngine)
 assert(client.delivery.outbox instanceof Outbox)

@@ -5,6 +5,28 @@ import {expect, spyOn, test} from 'bun:test'
 import BrowserVictoriaClient from '../src/browser/main.ts'
 import {clients} from './support.ts'
 
+test('minimal browser constructor derives service name from the current hostname', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'location')
+  Object.defineProperty(globalThis, 'location', {
+    configurable: true,
+    value: new URL('https://telemetry.example.com/page'),
+  })
+  try {
+    const client = new BrowserVictoriaClient
+    expect(client.resource['service.name']).toBe('telemetry.example.com')
+    expect(client.delivery.targets.logs?.url).toBe('http://localhost:4318/v1/logs')
+    expect(client.delivery.options.keepalive).toBe(true)
+    expect(client.delivery.options.maxBatchBytes).toBe(16_000)
+    expect(client.delivery.maxItemBytes).toBe(12_000)
+    await client.shutdown()
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(globalThis, 'location', descriptor)
+    } else {
+      Reflect.deleteProperty(globalThis, 'location')
+    }
+  }
+})
 test('browser endpoints resolve relative to an explicit base and use bounded defaults', () => {
   const client = new BrowserVictoriaClient({
     serviceName: 'browser',

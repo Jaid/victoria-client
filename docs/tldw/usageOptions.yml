@@ -1,6 +1,7 @@
 serviceName:
   type: string
-  required: true
+  defaultRaw: |-
+    OS: basename of `argv[1]`, then `argv[0]`, then `'unknown'`; browser: current hostname, then `'unknown'`
   info: service name; first constructor argument in the named-host form
 host:
   type: string
@@ -36,6 +37,8 @@ traces:
   info: named-host trace route; false disables traces
 endpoint:
   type: string
+  defaultRaw: |-
+    `'http://localhost:4318'` for zero-argument and service-name-only constructors
   info: OTLP collector base URL in the object form; appends /v1/{signal}
 endpoints:
   type: Partial<Record<Signal, Endpoint>>

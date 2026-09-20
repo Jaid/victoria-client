@@ -1,8 +1,34 @@
 import {expect, test} from 'bun:test'
 
+import {defaultOsServiceName} from '../src/defaults.ts'
 import VictoriaClient from '../src/main.ts'
 import {textBody, wireRecords} from './support.ts'
 
+test('minimal constructor derives the OS service name and local OTLP endpoint', async () => {
+  const originalArgv = process.argv
+  try {
+    process.argv = [String.raw`C:\portable\bun.exe`, String.raw`C:\apps\worker.ts`]
+    expect(defaultOsServiceName()).toBe('worker.ts')
+    const client = new VictoriaClient
+    expect(client.resource['service.name']).toBe('worker.ts')
+    expect(client.delivery.targets.logs?.url).toBe('http://localhost:4318/v1/logs')
+    expect(client.delivery.targets.metrics?.url).toBe('http://localhost:4318/v1/metrics')
+    expect(client.delivery.targets.traces?.url).toBe('http://localhost:4318/v1/traces')
+    await client.shutdown()
+    process.argv = [String.raw`C:\portable\bun.exe`]
+    expect(defaultOsServiceName()).toBe('bun.exe')
+    process.argv = []
+    expect(defaultOsServiceName()).toBe('unknown')
+  } finally {
+    process.argv = originalArgv
+  }
+})
+test('name-only constructor uses the local OTLP endpoint', async () => {
+  const client = new VictoriaClient('worker')
+  expect(client.resource['service.name']).toBe('worker')
+  expect(client.delivery.targets.logs?.url).toBe('http://localhost:4318/v1/logs')
+  await client.shutdown()
+})
 test('named constructor supports the usage sketch and starts delivery automatically', async () => {
   const calls: Array<{
     body: string

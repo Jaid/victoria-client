@@ -1,6 +1,8 @@
-## named-host facade
+## constructors
 
-`new VictoriaClient(serviceName, {host, protocol?, port?, path?, logs?, metrics?, traces?, interval?})` supports the compact API shown in `docs/tldw/usage.ts`. Each signal can be disabled or configured with `{path, format?, acknowledgment?}` (or a full/relative `endpoint` instead of `path`). A full URL or bare hostname is accepted. Bare hosts default to HTTPS; an explicit protocol/port overrides corresponding URL components. Relative signal endpoints resolve below the configured path. Periodic delivery is scheduled automatically with `interval: 1000`; set `interval` to `false` or `0` to disable it.
+`new VictoriaClient` sends OTLP JSON to `http://localhost:4318`. On OS runtimes, `service.name` defaults to the basename of `argv[1]`, then `argv[0]`, then `unknown`. `new VictoriaClient(serviceName)` keeps the same local OTLP endpoint with an explicit service name.
+
+`new VictoriaClient(serviceName, {host, protocol?, port?, path?, logs?, metrics?, traces?, interval?})` supports the compact named-host API shown in `docs/tldw/usage.ts`. Each signal can be disabled or configured with `{path, format?, acknowledgment?}` (or a full/relative `endpoint` instead of `path`). A full URL or bare hostname is accepted. Bare hosts default to HTTPS; an explicit protocol/port overrides corresponding URL components. Relative signal endpoints resolve below the configured path. Periodic delivery is scheduled automatically with `interval: 1000`; set `interval` to `false` or `0` to disable it.
 
 `pushMetric(values, options?)` records a map of gauge names to numeric values and returns whether every observation was admitted; partial admission is possible. `pushTrace(name, data?, {time?, duration?, status?})` flattens nested objects into dotted attributes, rejects flattening collisions and limits nesting to eight levels. It emits an instantaneous completed span by default. A numeric field in `data` is metadata, not an inferred duration.
 
@@ -8,7 +10,7 @@
 
 ## portable collection
 
-`VictoriaClient` is the default export of `victoria-client`. Supply a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
+`VictoriaClient` is the default export of `victoria-client`. The explicit object form still requires a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
 | Method | Behavior |
 | --- | --- |
@@ -100,7 +102,7 @@ No observations are created, no queued records are flushed and no retry/authenti
 
 ## browser flavor
 
-`BrowserVictoriaClient` is the default export of `victoria-browser-client`. It supports both constructors. Object options also accept `baseUrl` for resolving relative endpoints; the current page URL is used by default. Construction in a browser attaches page lifecycle listeners, and `shutdown()` removes them before draining. `pagehide` and visibility loss attempt delivery even when periodic scheduling is disabled. `bindPage(page?)` replaces the current attachment and returns an idempotent cleanup. Importing the module installs no global listeners.
+`BrowserVictoriaClient` is the default export of `victoria-browser-client`. Its zero-argument form uses the current `location.hostname` as `service.name`, falling back to `unknown`, and sends OTLP JSON to `http://localhost:4318`. The service-name-only form keeps that local endpoint. It also supports the explicit object and named-host constructors. Object options also accept `baseUrl` for resolving relative endpoints; the current page URL is used by default. Construction in a browser attaches page lifecycle listeners, and `shutdown()` removes them before draining. `pagehide` and visibility loss attempt delivery even when periodic scheduling is disabled. `bindPage(page?)` replaces the current attachment and returns an idempotent cleanup. Importing the module installs no global listeners.
 
 Browser defaults are `keepalive: true`, `maxBatchBytes: 16000` and `maxItemBytes: 12000`. Payloads remain bounded and the shared transport never enables keepalive above its 16000-byte limit. There is no IndexedDB or service-worker persistence. Use a same-origin relay and never publish ingestion credentials.
 

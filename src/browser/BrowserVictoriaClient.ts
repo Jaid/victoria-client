@@ -3,6 +3,7 @@ import type {Endpoint} from '../endpoints.ts'
 import type {VictoriaHostOptions} from '../facade.ts'
 import type {VictoriaClientOptions} from '../VictoriaClient.ts'
 
+import {defaultBrowserServiceName, defaultEndpoint} from '../defaults.ts'
 import VictoriaClient from '../VictoriaClient.ts'
 
 export type BrowserVictoriaClientOptions = VictoriaClientOptions & {
@@ -39,18 +40,27 @@ const browserOptions = (options: BrowserVictoriaClientOptions): VictoriaClientOp
 class BrowserVictoriaClient extends VictoriaClient {
   #page?: AbortController
 
+  constructor()
+  constructor(serviceName: string)
   constructor(options: BrowserVictoriaClientOptions)
   constructor(serviceName: string, options: VictoriaHostOptions)
-  constructor(nameOrOptions: BrowserVictoriaClientOptions | string, options?: VictoriaHostOptions) {
-    if (typeof nameOrOptions === 'string') {
+  constructor(nameOrOptions?: BrowserVictoriaClientOptions | string, options?: VictoriaHostOptions) {
+    if (typeof nameOrOptions === 'string' && options) {
       super(nameOrOptions, {
         keepalive: true,
         maxBatchBytes: 16_000,
         maxItemBytes: 12_000,
-        ...options!,
+        ...options,
       })
     } else {
-      super(browserOptions(nameOrOptions))
+      const objectOptions = typeof nameOrOptions === 'string' ? {
+        serviceName: nameOrOptions,
+        endpoint: defaultEndpoint,
+      } : nameOrOptions ?? {
+        serviceName: defaultBrowserServiceName(),
+        endpoint: defaultEndpoint,
+      }
+      super(browserOptions(objectOptions))
     }
     if (typeof window !== 'undefined') {
       this.bindPage(globalThis)

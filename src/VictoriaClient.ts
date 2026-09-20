@@ -9,6 +9,7 @@ import composeId from 'compose-id'
 import OtlpJsonCodec from './codecs/OtlpJsonCodec.ts'
 import VictoriaLogsCodec from './codecs/VictoriaLogsCodec.ts'
 import VictoriaMetricsCodec from './codecs/VictoriaMetricsCodec.ts'
+import {defaultEndpoint, defaultOsServiceName} from './defaults.ts'
 import DeliveryEngine from './delivery/DeliveryEngine.ts'
 import {createTargets} from './endpoints.ts'
 import {flattenAttributes, hostOptions} from './facade.ts'
@@ -49,10 +50,23 @@ class VictoriaClient {
   readonly #resourceAttributes
   readonly #series = new Map<string, Series>
   #seriesDropped = 0
+  constructor()
+  constructor(serviceName: string)
   constructor(options: VictoriaClientOptions)
   constructor(serviceName: string, options: VictoriaHostOptions)
-  constructor(nameOrOptions: VictoriaClientOptions | string, host?: VictoriaHostOptions) {
-    const options = typeof nameOrOptions === 'string' ? hostOptions(nameOrOptions, host!) : nameOrOptions
+  constructor(nameOrOptions?: VictoriaClientOptions | string, host?: VictoriaHostOptions) {
+    let options: VictoriaClientOptions
+    if (typeof nameOrOptions === 'string') {
+      options = host === undefined ? {
+        serviceName: nameOrOptions,
+        endpoint: defaultEndpoint,
+      } : hostOptions(nameOrOptions, host)
+    } else {
+      options = nameOrOptions ?? {
+        serviceName: defaultOsServiceName(),
+        endpoint: defaultEndpoint,
+      }
+    }
     this.options = options
     if (!options.serviceName.trim()) {
       throw new TypeError('serviceName must not be empty.')

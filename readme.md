@@ -250,59 +250,61 @@ Importing the portable entry does not load the SDK, SQLite or Node-specific modu
 
 ## options
 
-Constructor options below cover the named-host facade and the explicit object form. The facade takes `serviceName` as its first argument; the object form includes it in the options. Configure `host` for the facade or `endpoint`/`endpoints` for the object form. Store-specific fields belong to the `outbox` constructor, not directly to the client.
+Constructor options below cover the zero-config, service-name-only, named-host and explicit object forms. The named-host facade takes `serviceName` as its first argument; the object form includes it in the options. Configure `host` for the facade or `endpoint`/`endpoints` for the object form. Store-specific fields belong to the `outbox` constructor, not directly to the client.
 
-option |  | type | default | info
---- | --- | --- | --- | ---
-`serviceName` | * | `string` |  | service name; first constructor argument in the named-host form
-`baseUrl` |  | `string` | `location.href` | browser object form only; base for relative endpoints
-`compression` |  | `false \| 'gzip'` | `false` | gzip only when smaller; SDK flavor defaults to gzip
-`compressionThreshold` |  | `number` | `1024` | minimum payload size before trying gzip
-`endpoint` |  | `string` |  | OTLP collector base URL in the object form; appends /v1/{signal}
-`endpoints` |  | `Partial<Record<Signal, Endpoint>>` |  | exact per-signal URLs and formats; false disables a signal
-`fetch` |  | `(url: string, init: RequestInit) => Promise<Response>` | `fetch` | injectable transport; must honor the abort signal
-`headers` |  | `HeadersSource` |  | static headers or synchronous credential factory; never persisted
-`host` |  | `string` |  | base URL or hostname for the named-host form
-`initialRetry` |  | `number` | `1000` | initial exponential retry delay
-`interval` |  | `number \| false` | `1000` | delay between scheduled delivery passes; false or 0 disables the scheduler
-`keepalive` |  | `boolean` | `false` | only applied to requests at most 16000 bytes; enabled by default in the browser flavor
-`logs` |  | `HostSignalOptions` | `{"path":"v1/logs","format":"otlp-json"}` | named-host log route; false disables logs
-`maxAge` |  | `number` | `604800000` | age limit checked when a batch becomes eligible for delivery
-`maxAttempts` |  | `number` | `Number.MAX_SAFE_INTEGER` | attempt limit per failed batch
-`maxAttributeBytes` |  | `number` | `1024` | UTF-8 byte limit for individual attribute strings and names
-`maxAttributes` |  | `number` | `64` | maximum entries per attribute map
-`maxBatchBytes` |  | `number` | `256000` | encoded request limit before gzip; browser flavor defaults to 16000
-`maxBatchItems` |  | `number` | `256` | maximum outbox items selected per request
-`maxItemBytes` |  | `number` | `Math.min(64000, maxBatchBytes)` | encoded outbox item limit; browser flavor defaults to 12000
-`maxResponseBytes` |  | `number` | `64000` | maximum decoded acknowledgment body size
-`maxRetry` |  | `number` | `60000` | exponential delay cap before jitter; a longer Retry-After wins
-`maxSeries` |  | `number` | `1024` | distinct portable gauge and counter series
-`maxSpanEvents` |  | `number` | `32` | maximum events per span
-`metrics` |  | `HostSignalOptions` | `{"path":"api/v1/import","format":"victoria-json"}` | named-host metrics route; false disables metrics
-`minLogLevel` |  | `LogLevel` | `info` | minimum emitted log severity
-`now` |  | `() => number` | Unix milliseconds | injectable clock for deterministic tests
-`onEvent` |  | `(event: DeliveryEvent) => void` |  | delivery diagnostics callback; exceptions cannot interrupt delivery
-`outbox` |  | `Outbox` | `new MemoryOutbox` | memory or optional SQLite storage owned by one delivery engine
-`outbox.lease` |  | `number` | `60000` | SQLite ownership lease; minimum 3000
-`outbox.maxBytes` |  | `number` | `16000000` | per-signal logical payload-byte limit
-`outbox.maxDeadLetters` |  | `number` | `100` | maximum retained rejection diagnostics; payloads are not retained
-`outbox.maxItems` |  | `number` | `2048` | per-signal queued-item limit; configure on the outbox constructor
-`outbox.path` |  | `string` |  | required SQLite filename or :memory: when constructing SqliteOutbox
-`path` |  | `string` |  | shared path prefix in the named-host form
-`port` |  | `number` |  | optional port override
-`protocol` |  | `'http' \| 'https'` | `'https'` for bare hosts, otherwise the URL protocol | overrides the host URL protocol
-`random` |  | `() => number` | `Math.random` | injectable retry-jitter source
-`resource` |  | `Attributes` | `{}` | scalar resource attributes; service.name is enforced and service.instance.id defaults to a new compose-id value
-`sanitizeAttributes` |  | `(values: Attributes, signal: Signal) => Attributes` |  | runs before collection attribute limits and persistence; does not sanitize messages or resources
-`signalHeaders` |  | `Partial<Record<Signal, HeadersSource>>` |  | case-insensitive per-signal overrides for shared headers
-`timeout` |  | `number` | `5000` | request deadline including compression and response-body reads; also the default assertHealth deadline
-`traces` |  | `HostSignalOptions` | `{"path":"v1/traces","format":"otlp-json"}` | named-host trace route; false disables traces
+option | type | default | info
+--- | --- | --- | ---
+`baseUrl` | `string` | `location.href` | browser object form only; base for relative endpoints
+`compression` | `false \| 'gzip'` | `false` | gzip only when smaller; SDK flavor defaults to gzip
+`compressionThreshold` | `number` | `1024` | minimum payload size before trying gzip
+`endpoint` | `string` | `'http://localhost:4318'` for zero-argument and service-name-only constructors | OTLP collector base URL in the object form; appends /v1/{signal}
+`endpoints` | `Partial<Record<Signal, Endpoint>>` |  | exact per-signal URLs and formats; false disables a signal
+`fetch` | `(url: string, init: RequestInit) => Promise<Response>` | `fetch` | injectable transport; must honor the abort signal
+`headers` | `HeadersSource` |  | static headers or synchronous credential factory; never persisted
+`host` | `string` |  | base URL or hostname for the named-host form
+`initialRetry` | `number` | `1000` | initial exponential retry delay
+`interval` | `number \| false` | `1000` | delay between scheduled delivery passes; false or 0 disables the scheduler
+`keepalive` | `boolean` | `false` | only applied to requests at most 16000 bytes; enabled by default in the browser flavor
+`logs` | `HostSignalOptions` | `{"path":"v1/logs","format":"otlp-json"}` | named-host log route; false disables logs
+`maxAge` | `number` | `604800000` | age limit checked when a batch becomes eligible for delivery
+`maxAttempts` | `number` | `Number.MAX_SAFE_INTEGER` | attempt limit per failed batch
+`maxAttributeBytes` | `number` | `1024` | UTF-8 byte limit for individual attribute strings and names
+`maxAttributes` | `number` | `64` | maximum entries per attribute map
+`maxBatchBytes` | `number` | `256000` | encoded request limit before gzip; browser flavor defaults to 16000
+`maxBatchItems` | `number` | `256` | maximum outbox items selected per request
+`maxItemBytes` | `number` | `Math.min(64000, maxBatchBytes)` | encoded outbox item limit; browser flavor defaults to 12000
+`maxResponseBytes` | `number` | `64000` | maximum decoded acknowledgment body size
+`maxRetry` | `number` | `60000` | exponential delay cap before jitter; a longer Retry-After wins
+`maxSeries` | `number` | `1024` | distinct portable gauge and counter series
+`maxSpanEvents` | `number` | `32` | maximum events per span
+`metrics` | `HostSignalOptions` | `{"path":"api/v1/import","format":"victoria-json"}` | named-host metrics route; false disables metrics
+`minLogLevel` | `LogLevel` | `info` | minimum emitted log severity
+`now` | `() => number` | Unix milliseconds | injectable clock for deterministic tests
+`onEvent` | `(event: DeliveryEvent) => void` |  | delivery diagnostics callback; exceptions cannot interrupt delivery
+`outbox` | `Outbox` | `new MemoryOutbox` | memory or optional SQLite storage owned by one delivery engine
+`outbox.lease` | `number` | `60000` | SQLite ownership lease; minimum 3000
+`outbox.maxBytes` | `number` | `16000000` | per-signal logical payload-byte limit
+`outbox.maxDeadLetters` | `number` | `100` | maximum retained rejection diagnostics; payloads are not retained
+`outbox.maxItems` | `number` | `2048` | per-signal queued-item limit; configure on the outbox constructor
+`outbox.path` | `string` |  | required SQLite filename or :memory: when constructing SqliteOutbox
+`path` | `string` |  | shared path prefix in the named-host form
+`port` | `number` |  | optional port override
+`protocol` | `'http' \| 'https'` | `'https'` for bare hosts, otherwise the URL protocol | overrides the host URL protocol
+`random` | `() => number` | `Math.random` | injectable retry-jitter source
+`resource` | `Attributes` | `{}` | scalar resource attributes; service.name is enforced and service.instance.id defaults to a new compose-id value
+`sanitizeAttributes` | `(values: Attributes, signal: Signal) => Attributes` |  | runs before collection attribute limits and persistence; does not sanitize messages or resources
+`serviceName` | `string` | OS: basename of `argv[1]`, then `argv[0]`, then `'unknown'`; browser: current hostname, then `'unknown'` | service name; first constructor argument in the named-host form
+`signalHeaders` | `Partial<Record<Signal, HeadersSource>>` |  | case-insensitive per-signal overrides for shared headers
+`timeout` | `number` | `5000` | request deadline including compression and response-body reads; also the default assertHealth deadline
+`traces` | `HostSignalOptions` | `{"path":"v1/traces","format":"otlp-json"}` | named-host trace route; false disables traces
 
 ## api
 
-### named-host facade
+### constructors
 
-`new VictoriaClient(serviceName, {host, protocol?, port?, path?, logs?, metrics?, traces?, interval?})` supports the compact API shown in `docs/tldw/usage.ts`. Each signal can be disabled or configured with `{path, format?, acknowledgment?}` (or a full/relative `endpoint` instead of `path`). A full URL or bare hostname is accepted. Bare hosts default to HTTPS; an explicit protocol/port overrides corresponding URL components. Relative signal endpoints resolve below the configured path. Periodic delivery is scheduled automatically with `interval: 1000`; set `interval` to `false` or `0` to disable it.
+`new VictoriaClient` sends OTLP JSON to `http://localhost:4318`. On OS runtimes, `service.name` defaults to the basename of `argv[1]`, then `argv[0]`, then `unknown`. `new VictoriaClient(serviceName)` keeps the same local OTLP endpoint with an explicit service name.
+
+`new VictoriaClient(serviceName, {host, protocol?, port?, path?, logs?, metrics?, traces?, interval?})` supports the compact named-host API shown in `docs/tldw/usage.ts`. Each signal can be disabled or configured with `{path, format?, acknowledgment?}` (or a full/relative `endpoint` instead of `path`). A full URL or bare hostname is accepted. Bare hosts default to HTTPS; an explicit protocol/port overrides corresponding URL components. Relative signal endpoints resolve below the configured path. Periodic delivery is scheduled automatically with `interval: 1000`; set `interval` to `false` or `0` to disable it.
 
 `pushMetric(values, options?)` records a map of gauge names to numeric values and returns whether every observation was admitted; partial admission is possible. `pushTrace(name, data?, {time?, duration?, status?})` flattens nested objects into dotted attributes, rejects flattening collisions and limits nesting to eight levels. It emits an instantaneous completed span by default. A numeric field in `data` is metadata, not an inferred duration.
 
@@ -310,7 +312,7 @@ option |  | type | default | info
 
 ### portable collection
 
-`VictoriaClient` is the default export of `victoria-client`. Supply a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
+`VictoriaClient` is the default export of `victoria-client`. The explicit object form still requires a nonempty `serviceName` and at least one endpoint. URLs must be absolute HTTP(S) URLs without embedded credentials or fragments. In a browser, resolve a same-origin relay explicitly, for example `new URL('/api/telemetry', location.href).href`.
 
 | Method | Behavior |
 | --- | --- |
@@ -402,7 +404,7 @@ No observations are created, no queued records are flushed and no retry/authenti
 
 ### browser flavor
 
-`BrowserVictoriaClient` is the default export of `victoria-browser-client`. It supports both constructors. Object options also accept `baseUrl` for resolving relative endpoints; the current page URL is used by default. Construction in a browser attaches page lifecycle listeners, and `shutdown()` removes them before draining. `pagehide` and visibility loss attempt delivery even when periodic scheduling is disabled. `bindPage(page?)` replaces the current attachment and returns an idempotent cleanup. Importing the module installs no global listeners.
+`BrowserVictoriaClient` is the default export of `victoria-browser-client`. Its zero-argument form uses the current `location.hostname` as `service.name`, falling back to `unknown`, and sends OTLP JSON to `http://localhost:4318`. The service-name-only form keeps that local endpoint. It also supports the explicit object and named-host constructors. Object options also accept `baseUrl` for resolving relative endpoints; the current page URL is used by default. Construction in a browser attaches page lifecycle listeners, and `shutdown()` removes them before draining. `pagehide` and visibility loss attempt delivery even when periodic scheduling is disabled. `bindPage(page?)` replaces the current attachment and returns an idempotent cleanup. Importing the module installs no global listeners.
 
 Browser defaults are `keepalive: true`, `maxBatchBytes: 16000` and `maxItemBytes: 12000`. Payloads remain bounded and the shared transport never enables keepalive above its 16000-byte limit. There is no IndexedDB or service-worker persistence. Use a same-origin relay and never publish ingestion credentials.
 
