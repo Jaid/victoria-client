@@ -3,7 +3,7 @@
   "displayName": "VictoriaClient",
   "version": "0.1.0",
   "type": "module",
-  "description": "class for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics",
+  "description": "powerful abstractions for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics",
   "funding": "https://github.com/sponsors/Jaid",
   "license": "MIT",
   "repository": {
