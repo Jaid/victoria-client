@@ -36,7 +36,7 @@ npm install --save victoria-client
 <a href="https://www.jsdelivr.com/package/npm/victoria-client"><img src="https://shieldcn.dev/badge/jsDelivr-victoria--client-orange.svg?variant=secondary&logo=html5&logoColor=white" alt="victoria-client on jsDelivr"/></a> <a href="https://unpkg.com/browse/victoria-client/"><img src="https://shieldcn.dev/badge/UNPKG-victoria--client-orange.svg?variant=secondary&logo=html5&logoColor=white" alt="victoria-client on UNPKG"/></a>
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/victoria-client@0.2.0/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/victoria-client@0.3.0/index.js"></script>
 ```
 
 ## usage
