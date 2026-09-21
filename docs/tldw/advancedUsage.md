@@ -12,6 +12,7 @@ try {
   telemetry.info('Started.', {version: '1.0.0'})
   telemetry.metric('workers.active', 3)
   telemetry.increment('jobs.completed')
+  telemetry.histogram('job.duration', 125, {unit: 'ms'})
   await telemetry.wrap('job.run', async span => {
     telemetry.log('Processing.', {context: span})
     span.addEvent('job.validated')

@@ -28,6 +28,18 @@ export type WireRecord = {
       asDouble: number
     }>
   }
+  histogram?: {
+    aggregationTemporality: number
+    dataPoints: Array<{
+      bucketCounts: Array<string>
+      count: string
+      explicitBounds: Array<number>
+      max: number
+      min: number
+      startTimeUnixNano: string
+      sum: number
+    }>
+  }
   name?: string
   parentSpanId?: string
   severityNumber?: number

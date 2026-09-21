@@ -39,8 +39,38 @@ const severity: Record<LogLevel, number> = {
   fatal: 21,
 }
 type Series = {
+  histogram?: {
+    buckets: Map<number, number>
+    count: number
+    max: number
+    min: number
+    sum: number
+  }
   startTime: number
   value: number
+}
+const histogramE10Min = -9
+const histogramE10Max = 18
+const histogramBucketsPerDecimal = 18
+const formatHistogramBound = (value: number) => value.toExponential(3).replace(/e([+-])(\d)$/u, 'e$10$2')
+const histogramBoundStrings = Array.from({
+  length: (histogramE10Max - histogramE10Min) * histogramBucketsPerDecimal + 1,
+}, (_, index) => formatHistogramBound(10 ** (histogramE10Min + index / histogramBucketsPerDecimal)))
+const histogramBounds = histogramBoundStrings.map(Number)
+const histogramRanges = histogramBoundStrings.map((end, index) => `${index ? histogramBoundStrings[index - 1] : '0'}...${end}`)
+const histogramUpperRange = `${histogramBoundStrings.at(-1)}...+Inf`
+const histogramBucketIndex = (value: number) => {
+  let low = 0
+  let high = histogramBounds.length
+  while (low < high) {
+    const middle = Math.trunc((low + high) / 2)
+    if (value <= histogramBounds[middle]) {
+      high = middle
+    } else {
+      low = middle + 1
+    }
+  }
+  return low
 }
 /** Portable collection API. No global providers, hidden environment defaults or constructor-time network requests. */
 class VictoriaClient {
@@ -177,6 +207,122 @@ class VictoriaClient {
   }
   flush(options?: FlushOptions) {
     return this.delivery.flush(options)
+  }
+  histogram(name: string, value: number, options: MetricOptions = {}) {
+    if (this.#closed || !this.delivery.targets.metrics) {
+      return false
+    }
+    if (!name || !Number.isFinite(value) || value < 0) {
+      throw new TypeError('Histograms need a name and a finite nonnegative value.')
+    }
+    const unit = options.unit ?? '1'
+    const descriptor = `histogram:${unit}`
+    if (this.#descriptors.has(name) && this.#descriptors.get(name) !== descriptor) {
+      throw new TypeError(`Metric ${name} already has a different kind or unit.`)
+    }
+    const values = this.#attributes(options.attributes, 'metrics')
+    const labels = Object.fromEntries(Object.entries({
+      ...this.resource,
+      ...values,
+      __name__: name,
+    }).map(([key, labelValue]) => [key, stringifyLabel(labelValue)]))
+    const native = this.delivery.targets.metrics.codec instanceof VictoriaMetricsCodec
+    const key = native ? canonical(labels) : JSON.stringify([name, canonical(values)])
+    const time = timestamp(options.time ?? this.now())
+    let series = this.#series.get(key)
+    if (!series) {
+      if (this.#series.size >= this.#maxSeries) {
+        this.#seriesDropped++
+        return false
+      }
+      series = {
+        value: 0,
+        startTime: time,
+        histogram: {
+          buckets: new Map,
+          count: 0,
+          max: -Infinity,
+          min: Infinity,
+          sum: 0,
+        },
+      }
+      this.#series.set(key, series)
+      this.#descriptors.set(name, descriptor)
+    }
+    if (!series.histogram) {
+      throw new TypeError(`Metric ${name} already has a different kind or unit.`)
+    }
+    const histogram = series.histogram
+    const nextCount = histogram.count + 1
+    const nextSum = histogram.sum + value
+    if (!Number.isSafeInteger(nextCount) || !Number.isFinite(nextSum)) {
+      throw new RangeError('The cumulative histogram overflowed.')
+    }
+    const bucketIndex = histogramBucketIndex(value)
+    const bucketCount = (histogram.buckets.get(bucketIndex) ?? 0) + 1
+    if (!Number.isSafeInteger(bucketCount)) {
+      throw new RangeError('The cumulative histogram overflowed.')
+    }
+    histogram.buckets.set(bucketIndex, bucketCount)
+    histogram.count = nextCount
+    histogram.sum = nextSum
+    histogram.min = Math.min(histogram.min, value)
+    histogram.max = Math.max(histogram.max, value)
+    let body: Uint8Array
+    if (native) {
+      const at = Math.trunc(time)
+      const rows = [...histogram.buckets].toSorted(([a], [b]) => a - b).map(([index, count]) => JSON.stringify({
+        metric: {
+          ...labels,
+          __name__: `${name}_bucket`,
+          vmrange: index < histogramRanges.length ? histogramRanges[index] : histogramUpperRange,
+        },
+        timestamps: [at],
+        values: [count],
+      }))
+      rows.push(JSON.stringify({
+        metric: {
+          ...labels,
+          __name__: `${name}_sum`,
+        },
+        timestamps: [at],
+        values: [histogram.sum],
+      }), JSON.stringify({
+        metric: {
+          ...labels,
+          __name__: `${name}_count`,
+        },
+        timestamps: [at],
+        values: [histogram.count],
+      }))
+      body = encoder.encode(`${rows.join('\n')}\n`)
+    } else {
+      const buckets = [...histogram.buckets].toSorted(([a], [b]) => a - b)
+      const finiteBuckets = buckets.filter(([index]) => index < histogramBounds.length)
+      const point = {
+        attributes: otlpAttributes(values),
+        timeUnixNano: unixNano(time),
+        startTimeUnixNano: unixNano(series.startTime),
+        count: String(histogram.count),
+        sum: histogram.sum,
+        min: histogram.min,
+        max: histogram.max,
+        explicitBounds: finiteBuckets.map(([index]) => histogramBounds[index]),
+        bucketCounts: [
+          ...finiteBuckets.map(([, count]) => String(count)),
+          String(histogram.buckets.get(histogramBounds.length) ?? 0),
+        ],
+      }
+      body = this.#otlp('metrics', {
+        name,
+        unit,
+        histogram: {
+          dataPoints: [point],
+          aggregationTemporality: 2,
+        },
+      })
+    }
+    return this.delivery.enqueue('metrics', body)
   }
   increment(name: string, amount = 1, options: MetricOptions = {}) {
     return this.#metric(name, amount, 'counter', options, 'increment')

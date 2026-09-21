@@ -96,6 +96,71 @@ test('OTLP metrics keep one descriptor with absolute and incremental cumulative 
   expect(new Set(records[0].sum?.dataPoints.map(point => point.startTimeUnixNano)).size).toBe(1)
   expect(() => client.count('requests', 7)).toThrow('must not decrease')
 })
+test('OTLP histograms retain cumulative distribution state', async () => {
+  const {client, calls, advance} = fixture()
+  client.histogram('latency', 1, {unit: 'ms'})
+  advance(10)
+  client.histogram('latency', 10, {unit: 'ms'})
+  await client.flush()
+  const records = wireRecords(calls[0].body, 'metrics')
+  expect(records).toHaveLength(1)
+  expect(records[0].histogram?.aggregationTemporality).toBe(2)
+  expect(records[0].histogram?.dataPoints.map(point => ({
+    count: point.count,
+    sum: point.sum,
+    min: point.min,
+    max: point.max,
+    explicitBounds: point.explicitBounds,
+    bucketCounts: point.bucketCounts,
+  }))).toEqual([{
+    count: '1',
+    sum: 1,
+    min: 1,
+    max: 1,
+    explicitBounds: [1],
+    bucketCounts: ['1', '0'],
+  }, {
+    count: '2',
+    sum: 11,
+    min: 1,
+    max: 10,
+    explicitBounds: [1, 10],
+    bucketCounts: ['1', '1', '0'],
+  }])
+  expect(new Set(records[0].histogram?.dataPoints.map(point => point.startTimeUnixNano)).size).toBe(1)
+  expect(() => client.metric('latency', 1, {unit: 'ms'})).toThrow('different kind')
+  expect(() => client.histogram('invalid', -1)).toThrow()
+})
+test('native histograms use Victoria vmrange buckets with cumulative sum and count', async () => {
+  const bodies: Array<string> = []
+  const {client, advance} = fixture({
+    endpoint: undefined,
+    endpoints: {metrics: {
+      url: 'http://metrics.test/api/v1/import',
+      format: 'victoria-json',
+    }},
+    fetch: async (_url, init) => {
+      bodies.push(textBody(init))
+      return new Response(null, {status: 204})
+    },
+  })
+  client.histogram('latency', 1)
+  advance(10)
+  client.histogram('latency', 10)
+  await client.flush()
+  expect(bodies).toHaveLength(1)
+  const rows = bodies[0].trim().split('\n').map(line => JSON.parse(line) as {
+    metric: Record<string, string>
+    values: Array<number>
+  })
+  const metricNameKey = '__name__'
+  const bucketRows = rows.filter(row => row.metric[metricNameKey] === 'latency_bucket')
+  expect(bucketRows).toHaveLength(2)
+  expect(bucketRows.map(row => row.values.at(-1) ?? Number.NaN).toSorted((a, b) => a - b)).toEqual([1, 1])
+  expect(bucketRows.every(row => row.metric.vmrange.includes('...'))).toBe(true)
+  expect(rows.find(row => row.metric[metricNameKey] === 'latency_sum')?.values).toEqual([1, 11])
+  expect(rows.find(row => row.metric[metricNameKey] === 'latency_count')?.values).toEqual([1, 2])
+})
 test('gauge cardinality is bounded too and metric descriptors cannot change', () => {
   const {client} = fixture({maxSeries: 2})
   expect(client.metric('cpu', 1, {attributes: {host: 'a'}})).toBe(true)
