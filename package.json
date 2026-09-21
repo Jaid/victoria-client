@@ -1,7 +1,7 @@
 {
   "name": "victoria-client",
   "displayName": "VictoriaClient",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "powerful abstractions for collecting and pushing data to VictoriaLogs, VictoriaTraces and VictoriaMetrics",
   "funding": "https://github.com/sponsors/Jaid",
