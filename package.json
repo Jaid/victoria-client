@@ -50,24 +50,24 @@
   },
   "dependencies": {
     "compose-id": "0.2.0",
-    "@opentelemetry/api": "1.9.1",
-    "@opentelemetry/api-logs": "0.222.0",
-    "@opentelemetry/core": "2.11.0",
-    "@opentelemetry/otlp-transformer": "0.222.0",
-    "@opentelemetry/resources": "2.11.0",
-    "@opentelemetry/sdk-logs": "0.222.0",
-    "@opentelemetry/sdk-metrics": "2.11.0",
-    "@opentelemetry/sdk-trace": "2.11.0"
+    "@opentelemetry/api": "1.10.0",
+    "@opentelemetry/api-logs": "0.223.0",
+    "@opentelemetry/core": "3.1.0",
+    "@opentelemetry/otlp-transformer": "0.301.0",
+    "@opentelemetry/resources": "3.1.0",
+    "@opentelemetry/sdk-logs": "3.1.0",
+    "@opentelemetry/sdk-metrics": "3.1.0",
+    "@opentelemetry/sdk-trace": "3.1.0"
   },
   "devDependencies": {
-    "eslint": "10.11.0",
-    "eslint-config-jaid": "33.0.0",
-    "fs-extra": "11.4.0",
-    "tldw": "9.7.0",
+    "eslint": "10.14.0",
+    "eslint-config-jaid": "37.1.0",
+    "fs-extra": "11.4.1",
+    "tldw": "9.9.0",
     "tsconfig-jaid-bun": "16.0.0",
     "typescript": "npm:typescript-classic@6.0.4",
-    "vite": "8.3.0",
-    "@types/bun": "1.4.2",
+    "vite": "8.3.6",
+    "@types/bun": "1.4.4",
     "@types/fs-extra": "11.0.4"
   },
   "files": [
