@@ -1,6 +1,6 @@
 import {expect, test} from 'bun:test'
 
-import {ROOT_CONTEXT, trace} from '@opentelemetry/api'
+import {ROOT_CONTEXT, SeverityNumber, trace} from '@opentelemetry/api'
 import {ExportResultCode} from '@opentelemetry/core'
 
 import DeliveryEngine from '../src/delivery/DeliveryEngine.ts'
@@ -87,7 +87,7 @@ for (const handoff of ['batch', 'immediate'] as const) {
       const child = client.tracer.startSpan('sdk-child', {}, trace.setSpan(ROOT_CONTEXT, parent))
       client.logger.emit({
         body: 'sdk-log',
-        severityNumber: 9,
+        severityNumber: SeverityNumber.INFO,
         context: trace.setSpan(ROOT_CONTEXT, child),
       })
       client.meter.createCounter('sdk.counter').add(3, {job: 'test'})
