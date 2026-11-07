@@ -77,10 +77,20 @@ class BrowserVictoriaClient extends VictoriaClient {
     const options = {signal: controller.signal}
     page.document.addEventListener('visibilitychange', () => {
       if (page.document.visibilityState === 'hidden') {
-        this.flushPage()
+        this.dispatchPage()
       }
     }, options)
-    page.addEventListener('pagehide', () => this.flushPage(), options)
+    page.addEventListener('pagehide', () => {
+      // Listeners after this one still write records, like an app closing its session span.
+      this.delivery.urgent = true
+      this.dispatchPage()
+    }, options)
+    page.addEventListener('pageshow', () => {
+      this.delivery.urgent = false
+    }, options)
+    controller.signal.addEventListener('abort', () => {
+      this.delivery.urgent = false
+    })
     return () => {
       controller.abort()
       if (this.#page === controller) {
@@ -95,9 +105,9 @@ class BrowserVictoriaClient extends VictoriaClient {
     return super.shutdown(options)
   }
 
-  private flushPage() {
+  private dispatchPage() {
     // eslint-disable-next-line promise/prefer-await-to-then -- Page lifecycle callbacks cannot await asynchronous delivery.
-    this.flush().catch(() => {})
+    this.delivery.dispatch().catch(() => {})
   }
 }
 

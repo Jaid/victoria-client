@@ -79,12 +79,21 @@ export default class DeliveryEngine {
   readonly maxItemBytes: number
   readonly outbox: Outbox
   readonly targets: Partial<Record<Signal, Target>>
+  /** While set, every admission is followed by `dispatch()` once the current microtask checkpoint is reached. The browser flavor sets it between pagehide and pageshow, so records written by later pagehide listeners still leave the page. */
+  urgent = false
   #accepting = true
   readonly #batchBytes: number
   readonly #batchItems: number
   readonly #beforeScheduledFlush?: () => Promise<void> | void
   #closed = false
   #controller?: AbortController
+  readonly #dispatched: Record<Signal, Set<number>> = {
+    logs: new Set,
+    metrics: new Set,
+    traces: new Set,
+  }
+  readonly #dispatches = new Set<Promise<unknown>>
+  #dispatchQueued = false
   #finalReport?: DeliveryReport
   #interval: false | number
   readonly #maxAge: number
@@ -181,6 +190,18 @@ export default class DeliveryEngine {
       throw new AggregateError(failures, 'Victoria health check failed.')
     }
   }
+  /**
+   * Starts a request for every ready batch at once, instead of one after another and after a drain that may already be in flight. The requests begin synchronously and skip compression, so keepalive can carry them out of a closing page. Backoff and authentication pauses are respected. Failed batches stay queued for the regular drain.
+   */
+  dispatch(): Promise<DeliveryReport> {
+    if (this.#closed) {
+      return Promise.resolve(this.status())
+    }
+    const sends = signals.flatMap(signal => this.#dispatchSignal(signal))
+    const all = Promise.all(sends)
+    this.#dispatches.add(all)
+    return all.finally(() => this.#dispatches.delete(all)).then(() => this.status())
+  }
   enqueue(signal: Signal, body: Uint8Array, records = 1) {
     return this.enqueueMany([{
       signal,
@@ -215,6 +236,13 @@ export default class DeliveryEngine {
     }
     for (const item of items) {
       this.#totals[item.signal].admitted += item.records
+    }
+    if (this.urgent && !this.#dispatchQueued) {
+      this.#dispatchQueued = true
+      queueMicrotask(() => {
+        this.#dispatchQueued = false
+        this.dispatch().catch(() => {})
+      })
     }
     return true
   }
@@ -353,6 +381,101 @@ export default class DeliveryEngine {
     } while (performance.now() < deadline)
     throw new Error(`Telemetry sync timed out with ${this.status().pendingRecords} records pending.`)
   }
+  /** Settles a sent batch and books its outcome. */
+  #accept(signal: Signal, items: ReadonlyArray<OutboxItem>, records: number, result: Awaited<ReturnType<HttpTransport['send']>>) {
+    this.outbox.settle(signal, items, result.rejected || result.warning ? {
+      signal,
+      reason: result.warning ?? 'The collector partially rejected telemetry.',
+      records: result.rejected,
+      bytes: 0,
+      time: this.#now(),
+    } : undefined)
+    this.#totals[signal].sent += records - result.rejected
+    this.#totals[signal].rejected += result.rejected
+    this.#totals[signal].sentBytes += result.bytes
+    this.#emit({
+      type: 'sent',
+      signal,
+      records: records - result.rejected,
+      message: result.warning,
+    })
+  }
+  /** The leading items that fit one request, with their combined body. A lone item can still exceed maxBatchBytes, which the caller has to check. */
+  #batch(target: Target, candidates: ReadonlyArray<OutboxItem>) {
+    // Bound pre-encoding work too; codecs may otherwise assemble many large records before splitting.
+    let rawBytes = 0
+    let items: Array<OutboxItem> = []
+    for (const item of candidates.slice(0, this.#batchItems)) {
+      if (items.length && rawBytes + item.body.byteLength > this.#batchBytes) {
+        break
+      }
+      items.push(item)
+      rawBytes += item.body.byteLength
+    }
+    let body = target.codec.combine(items.map(item => item.body))
+    while (body.byteLength > this.#batchBytes && items.length > 1) {
+      items = items.slice(0, Math.ceil(items.length / 2))
+      body = target.codec.combine(items.map(item => item.body))
+    }
+    return {
+      items,
+      body,
+    }
+  }
+  async #dispatchBatch(signal: Signal, target: Target, items: ReadonlyArray<OutboxItem>, body: Uint8Array) {
+    const dispatched = this.#dispatched[signal]
+    for (const item of items) {
+      dispatched.add(item.id)
+    }
+    const records = items.reduce((n, item) => n + item.records, 0)
+    this.#totals[signal].requests++
+    try {
+      // fetch starts before the first await here, which keepalive needs on a closing page.
+      const result = await this.#transport.send(target, body, records, AbortSignal.any([]), {compress: false})
+      if (this.#closed) {
+        return
+      }
+      const lane = this.outbox.lane(signal)
+      this.#accept(signal, items, records, result)
+      // Settling clears the lane, which may still describe a drain request in flight.
+      if (lane.through !== undefined && this.#running) {
+        this.outbox.defer(signal, lane)
+      }
+    } catch {
+      // The batch stays queued; the regular drain retries it with backoff or rejects it.
+    } finally {
+      for (const item of items) {
+        dispatched.delete(item.id)
+      }
+    }
+  }
+  #dispatchSignal(signal: Signal) {
+    const target = this.targets[signal]
+    if (!target) {
+      return []
+    }
+    const lane = this.outbox.lane(signal)
+    if (lane.blocked || lane.retryAt > this.#now()) {
+      return []
+    }
+    const dispatched = this.#dispatched[signal]
+    // A running drain owns its batch through lane.through until that request settles.
+    const owned = this.#running ? lane.through ?? 0 : 0
+    let pending = this.outbox.peek(signal, this.outbox.highWater(), this.outbox.stats(signal).items).filter(item => {
+      return item.id > owned && !dispatched.has(item.id) && this.#now() - item.createdAt < this.#maxAge
+    })
+    const sends: Array<Promise<void>> = []
+    while (pending.length) {
+      const {items, body} = this.#batch(target, pending)
+      if (body.byteLength > this.#batchBytes) {
+        // The regular drain rejects the oversized item.
+        break
+      }
+      pending = pending.slice(items.length)
+      sends.push(this.#dispatchBatch(signal, target, items, body))
+    }
+    return sends
+  }
   async #drain(abort: AbortSignal) {
     let through: number
     do {
@@ -375,7 +498,8 @@ export default class DeliveryEngine {
       if (lane.blocked || lane.retryAt > this.#now()) {
         return
       }
-      let items = this.outbox.peek(signal, Math.min(lane.through ?? through, through), this.#batchItems)
+      const dispatched = this.#dispatched[signal]
+      let items = this.outbox.peek(signal, Math.min(lane.through ?? through, through), this.#batchItems).filter(item => !dispatched.has(item.id))
       if (!items.length) {
         if (lane.through !== undefined) {
           this.outbox.defer(signal, emptyLane())
@@ -388,22 +512,9 @@ export default class DeliveryEngine {
         this.#reject(signal, expired, 'Queued telemetry exceeded maxAge.', 'expired')
         continue
       }
-      // Bound pre-encoding work too; codecs may otherwise assemble many large records before splitting.
-      let rawBytes = 0
-      const bounded: Array<OutboxItem> = []
-      for (const item of items) {
-        if (bounded.length && rawBytes + item.body.byteLength > this.#batchBytes) {
-          break
-        }
-        bounded.push(item)
-        rawBytes += item.body.byteLength
-      }
-      items = bounded
-      let body = target.codec.combine(items.map(item => item.body))
-      while (body.byteLength > this.#batchBytes && items.length > 1) {
-        items = items.slice(0, Math.ceil(items.length / 2))
-        body = target.codec.combine(items.map(item => item.body))
-      }
+      const batch = this.#batch(target, items)
+      items = batch.items
+      const {body} = batch
       if (body.byteLength > this.#batchBytes) {
         this.#reject(signal, items, 'Encoded telemetry exceeded maxBatchBytes.')
         continue
@@ -472,22 +583,7 @@ export default class DeliveryEngine {
         })
         return
       }
-      this.outbox.settle(signal, items, result.rejected || result.warning ? {
-        signal,
-        reason: result.warning ?? 'The collector partially rejected telemetry.',
-        records: result.rejected,
-        bytes: 0,
-        time: this.#now(),
-      } : undefined)
-      this.#totals[signal].sent += records - result.rejected
-      this.#totals[signal].rejected += result.rejected
-      this.#totals[signal].sentBytes += result.bytes
-      this.#emit({
-        type: 'sent',
-        signal,
-        records: records - result.rejected,
-        message: result.warning,
-      })
+      this.#accept(signal, items, records, result)
     }
   }
   #dropIncoming(items: ReadonlyArray<PendingItem>, message: string) {
@@ -514,6 +610,9 @@ export default class DeliveryEngine {
       this.#controller?.abort()
       if (this.#running) {
         await this.#running
+      }
+      if (this.#dispatches.size) {
+        await abortable(Promise.all(this.#dispatches), AbortSignal.timeout(Math.max(1, Math.floor(deadline - performance.now())))).catch(() => {})
       }
       let report = this.status()
       while (report.pendingRecords && performance.now() < deadline) {

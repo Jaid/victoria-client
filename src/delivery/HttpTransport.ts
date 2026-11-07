@@ -10,6 +10,10 @@ export type Target = {
   headers?: HeadersSource
   url: string
 }
+export type SendOptions = {
+  /** If `false`, the request skips gzip, so `fetch` starts synchronously within `send()`. */
+  compress?: boolean
+}
 export type HttpTransportOptions = {
   compression?: 'gzip' | false
   compressionThreshold?: number
@@ -73,7 +77,7 @@ async function readBounded(response: Response, limit: number, signal: AbortSigna
 }
 export default class HttpTransport {
   constructor(readonly options: HttpTransportOptions) { }
-  async send(target: Target, body: Uint8Array, records: number, parent: AbortSignal) {
+  async send(target: Target, body: Uint8Array, records: number, parent: AbortSignal, {compress = true}: SendOptions = {}) {
     const signal = AbortSignal.any([parent, AbortSignal.timeout(this.options.timeout)])
     const headers = new Headers(headersFrom(this.options.headers))
     for (const [name, value] of Object.entries(headersFrom(target.headers))) {
@@ -82,7 +86,7 @@ export default class HttpTransport {
     headers.set('Content-Type', target.codec.contentType)
     headers.delete('Content-Encoding')
     let payload = body
-    if (this.options.compression === 'gzip' && body.byteLength >= (this.options.compressionThreshold ?? 1024)) {
+    if (compress && this.options.compression === 'gzip' && body.byteLength >= (this.options.compressionThreshold ?? 1024)) {
       const compressed = await gzip(body, signal)
       if (compressed.byteLength < body.byteLength) {
         payload = compressed

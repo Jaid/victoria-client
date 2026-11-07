@@ -75,7 +75,7 @@ Synchronous durability trades event-loop latency for a clear admission boundary.
 
 The portable entry has no Bun/Node/SDK runtime imports and uses a memory outbox. A same-origin relay is the embedding application’s responsibility. Never embed a private ingestion credential in a public browser bundle.
 
-Lifecycle-triggered flush and keepalive remain best-effort. There is no IndexedDB persistence, service-worker scheduler or public relay in this package. The browser flavor binds pagehide, pageshow and visibilitychange while started. These are bounded best-effort attempts, not an unload delivery guarantee. The portable flavor installs no page listeners.
+Lifecycle-triggered flush and keepalive remain best-effort. There is no IndexedDB persistence, service-worker scheduler or public relay in this package. The browser flavor binds pagehide, pageshow and visibilitychange while started and dispatches batches in parallel on page exit, so only the browser’s aggregate keepalive budget limits what leaves a closing page. These are bounded best-effort attempts, not an unload delivery guarantee. The portable flavor installs no page listeners.
 
 ## verification references
 

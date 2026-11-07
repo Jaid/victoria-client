@@ -271,3 +271,94 @@ test('Retry-After supports seconds and HTTP dates', () => {
   expect(retryAfter('invalid', now)).toBe(0)
   expect(new DeliveryError('test', 'retry').kind).toBe('retry')
 })
+test('dispatch starts every batch synchronously and later drains do not resend them', async () => {
+  const bodies: Array<string> = []
+  const releases: Array<() => void> = []
+  const {client} = fixture({
+    maxBatchBytes: 600,
+    fetch: async (_url, init) => {
+      bodies.push(textBody(init))
+      await new Promise<void>(resolve => releases.push(resolve))
+      return Response.json({})
+    },
+  })
+  for (const message of ['a', 'b', 'c']) {
+    client.info(message)
+  }
+  const dispatched = client.delivery.dispatch()
+  expect(bodies).toHaveLength(3)
+  const flushed = client.flush()
+  await Bun.sleep(0)
+  expect(bodies).toHaveLength(3)
+  for (const resolve of releases.splice(0)) {
+    resolve()
+  }
+  await dispatched
+  await flushed
+  expect(bodies.flatMap(body => wireRecords(body).map(record => record.body?.stringValue ?? '')).toSorted((a, b) => a.localeCompare(b))).toEqual(['a', 'b', 'c'])
+  expect(client.status().signals.logs).toMatchObject({
+    records: 0,
+    sent: 3,
+    requests: 3,
+  })
+})
+test('dispatch leaves the batch of a drain in flight alone and keeps its lane', async () => {
+  const bodies: Array<string> = []
+  const releases: Array<() => void> = []
+  const {client} = fixture({fetch: async (_url, init) => {
+    bodies.push(textBody(init))
+    await new Promise<void>(resolve => releases.push(resolve))
+    return Response.json({})
+  }})
+  client.info('draining')
+  const flushed = client.flush()
+  await Bun.sleep(0)
+  client.info('dispatched')
+  const dispatched = client.delivery.dispatch()
+  expect(bodies.map(body => wireRecords(body)[0].body?.stringValue)).toEqual(['draining', 'dispatched'])
+  releases[1]()
+  await dispatched
+  expect(client.delivery.outbox.lane('logs').through).toBeNumber()
+  releases[0]()
+  await flushed
+  expect(bodies).toHaveLength(2)
+  expect(client.status().complete).toBe(true)
+})
+test('failed dispatches stay queued for the regular drain', async () => {
+  let calls = 0
+  const {client} = fixture({fetch: async () => {
+    calls++
+    return calls === 1 ? new Response(null, {status: 503}) : Response.json({})
+  }})
+  client.info('retried')
+  await client.delivery.dispatch()
+  expect(client.status().signals.logs).toMatchObject({
+    records: 1,
+    attempts: 0,
+  })
+  await client.flush()
+  expect(calls).toBe(2)
+  expect(client.status().complete).toBe(true)
+})
+test('dispatch respects backoff and skips compression', async () => {
+  const encodings: Array<string | null> = []
+  let healthy = false
+  const {client, advance} = fixture({
+    compression: 'gzip',
+    compressionThreshold: 1,
+    fetch: async (_url, init) => {
+      encodings.push(new Headers(init.headers).get('Content-Encoding'))
+      return healthy ? Response.json({}) : new Response(null, {status: 503})
+    },
+  })
+  client.info('backed off')
+  await client.flush()
+  expect(encodings).toEqual(['gzip'])
+  await client.delivery.dispatch()
+  expect(encodings).toHaveLength(1)
+  healthy = true
+  advance(2000)
+  await client.delivery.dispatch()
+  expect(encodings).toEqual(['gzip', null])
+  expect(client.status().complete).toBe(true)
+})
