@@ -1,4 +1,3 @@
-/* eslint-disable typescript/no-use-before-define -- The public build command is listed before its private pipeline stages. */
 import type {PackageFlavor} from './flavors.ts'
 
 import {resolve} from 'node:path'
