@@ -1,4 +1,3 @@
-/* eslint-disable promise/prefer-await-to-then -- Preserve shared flush/shutdown promise identity and synchronous timer callbacks. */
 import type {SyncOptions} from '../facade.ts'
 import type Outbox from '../storage/base/Outbox.ts'
 import type {OutboxItem, PendingItem} from '../storage/base/Outbox.ts'

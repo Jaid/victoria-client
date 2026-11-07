@@ -1,4 +1,3 @@
-/* eslint-disable promise/prefer-await-to-callbacks, promise/prefer-await-to-then -- wrap() must preserve synchronous return and throw behavior. */
 import type {DeliveryOptions, DeliveryReport, FlushOptions, HealthOptions} from './delivery/DeliveryEngine.ts'
 import type {EndpointOptions} from './endpoints.ts'
 import type {PushTraceOptions, SyncOptions, TraceData, VictoriaHostOptions} from './facade.ts'

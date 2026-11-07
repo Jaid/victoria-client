@@ -1,4 +1,3 @@
-/* eslint-disable promise/prefer-await-to-then -- Abort races must attach rejection handlers synchronously, including to already-aborted operations. */
 import type {Attributes} from './types.ts'
 
 export const encoder = new TextEncoder
@@ -100,7 +99,6 @@ export function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<
     void promise.then(value => {
       signal.removeEventListener('abort', abort)
       resolve(value)
-    // eslint-disable-next-line promise/prefer-await-to-callbacks -- Both settlement branches must remove the abort listener synchronously.
     }, error => {
       signal.removeEventListener('abort', abort)
       reject(error)

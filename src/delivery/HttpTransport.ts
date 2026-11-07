@@ -1,4 +1,3 @@
-/* eslint-disable promise/prefer-await-to-then -- Late-response cleanup and stream cancellation must not delay the bounded request. */
 import type Codec from '../codecs/base/Codec.ts'
 
 import {abortable, concat} from '../util.ts'

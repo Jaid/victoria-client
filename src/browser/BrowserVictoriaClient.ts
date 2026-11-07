@@ -106,7 +106,6 @@ class BrowserVictoriaClient extends VictoriaClient {
   }
 
   private dispatchPage() {
-    // eslint-disable-next-line promise/prefer-await-to-then -- Page lifecycle callbacks cannot await asynchronous delivery.
     this.delivery.dispatch().catch(() => {})
   }
 }

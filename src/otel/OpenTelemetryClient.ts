@@ -1,5 +1,3 @@
-/* eslint-disable promise/prefer-await-to-then -- Concurrent flush callers share the exact same promise. */
-
 import type {DeliveryOptions, DeliveryReport, FlushOptions, HealthOptions} from '../delivery/DeliveryEngine.ts'
 import type {EndpointOptions} from '../endpoints.ts'
 import type {SyncOptions} from '../facade.ts'

@@ -1,4 +1,3 @@
-/* eslint-disable promise/prefer-await-to-callbacks -- OpenTelemetry exporter interfaces require a completion callback. */
 import type DeliveryEngine from '../delivery/DeliveryEngine.ts'
 import type {Signal} from '../types.ts'
 import type {ExportResult} from '@opentelemetry/core'
