@@ -6,12 +6,13 @@ import VictoriaClient, {nativeEndpoints} from '../src/main.ts'
 import OpenTelemetryClient from '../src/otel/main.ts'
 
 // Opt-in only. Point these variables at disposable instances, never an authoritative telemetry store.
+// Start VictoriaTraces with -search.latencyOffset=0s, otherwise spans stay invisible for 30 s. New VictoriaMetrics series take about 10 s to show up.
 const logs = Bun.env.VICTORIA_TEST_LOGS_URL
 const metrics = Bun.env.VICTORIA_TEST_METRICS_URL
 const traces = Bun.env.VICTORIA_TEST_TRACES_URL
 const enabled = Boolean(logs && metrics && traces)
 async function waitFor(check: () => Promise<boolean>) {
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 300; i++) {
     if (await check()) {
       return
     }
@@ -67,7 +68,7 @@ test.skipIf(!enabled)('disposable Victoria backends ingest and expose portable n
   } finally {
     await client.shutdown({timeout: 1000})
   }
-}, 20_000)
+}, 60_000)
 test.skipIf(!enabled)('disposable Victoria backends ingest official protobuf logs, spans and histograms', async () => {
   const id = composeId()
   const serviceName = `victoria-client-sdk-${id}`
@@ -91,4 +92,4 @@ test.skipIf(!enabled)('disposable Victoria backends ingest official protobuf log
   } finally {
     await client.shutdown({timeout: 1000})
   }
-}, 20_000)
+}, 60_000)
